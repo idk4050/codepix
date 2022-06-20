@@ -17,6 +17,7 @@ type Config struct {
 	EventStore      eventStore
 	StoreProjection storeProjection
 	EventBus        eventBus
+	RPC             rpc
 }
 
 func New() (*Config, error) {
@@ -25,6 +26,7 @@ func New() (*Config, error) {
 		EventStore:      eventStore{},
 		StoreProjection: storeProjection{},
 		EventBus:        eventBus{},
+		RPC:             rpc{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -45,6 +47,10 @@ func New() (*Config, error) {
 	env.Parse(&c.EventBus)
 	if c.EventBus == (eventBus{}) {
 		return nil, errors.New("failed to load event bus config")
+	}
+	env.Parse(&c.RPC)
+	if c.RPC == (rpc{}) {
+		return nil, errors.New("failed to load RPC config")
 	}
 	return c, nil
 }
@@ -99,4 +105,8 @@ type eventBus struct {
 	Name     string `env:"EB_NAME"`
 	User     string `env:"EB_USER"`
 	Password string `env:"EB_PASSWORD"`
+}
+
+type rpc struct {
+	Port string `env:"RPC_PORT"`
 }

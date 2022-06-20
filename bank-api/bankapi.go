@@ -6,8 +6,12 @@ import (
 	"codepix/bank-api/adapters/eventbus"
 	"codepix/bank-api/adapters/eventstore"
 	"codepix/bank-api/adapters/projectionclient"
+	"codepix/bank-api/adapters/rpc"
+	"codepix/bank-api/adapters/validator"
 	"codepix/bank-api/config"
 	"context"
+	"errors"
+	"net"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -15,6 +19,8 @@ import (
 	"github.com/looplab/eventhorizon/commandhandler/bus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 type BankAPI struct {
@@ -25,12 +31,20 @@ type BankAPI struct {
 	projection *projectionclient.StoreProjection
 	eventBus   *eventbus.EventBus
 	commandBus eventhorizon.CommandHandler
+	server     *grpc.Server
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*BankAPI, error) {
 	logger := zapr.NewLogger(loggerImpl.WithOptions(
 		zap.AddStacktrace(zapcore.DPanicLevel),
 		zap.WithCaller(false),
+	))
+	panicLogger := zapr.NewLogger(loggerImpl.WithOptions(
+		zap.AddStacktrace(zapcore.DebugLevel),
+		zap.AddCallerSkip(3),
+		zap.Fields(
+			zap.StackSkip("stacktrace", 3),
+		),
 	))
 	database, err := databaseclient.Open(config, logger)
 	if err != nil {
@@ -52,6 +66,25 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 	commandBus := eventhorizon.UseCommandHandlerMiddleware(commandBusHandler,
 		commandbus.Logger(logger),
 	)
+	validator, err := validator.New()
+	if err != nil {
+		return nil, err
+	}
+	server := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			rpc.UnaryPanicHandler(panicLogger),
+			rpc.UnaryLogger(logger),
+			rpc.UnaryValidator(validator),
+		),
+		grpc.ChainStreamInterceptor(
+			rpc.StreamPanicHandler(panicLogger),
+			rpc.StreamLogger(logger),
+			rpc.StreamValidator(validator),
+		),
+	)
+
+	reflection.Register(server)
+
 	bankAPI := &BankAPI{
 		logger:     logger,
 		config:     config,
@@ -60,6 +93,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 		projection: projection,
 		eventBus:   eventBus,
 		commandBus: commandBus,
+		server:     server,
 	}
 	return bankAPI, nil
 }
@@ -75,12 +109,34 @@ func (api BankAPI) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	listener, err := net.Listen("tcp", "0.0.0.0:"+api.config.RPC.Port)
+	if err != nil {
+		return err
+	}
+	grpcLogger := api.logger.WithName("grpc")
+	grpcLogger.Info("grpc server listening on port " + api.config.RPC.Port)
+	go func() {
+		err := api.server.Serve(listener)
+		switch {
+		case err == nil:
+			return
+		case errors.Is(err, grpc.ErrServerStopped):
+			grpcLogger.Info("grpc server stopped")
+		default:
+			grpcLogger.Error(err, "grpc server failed to serve")
+		}
+	}()
+
 	api.logger.Info("bank API started")
 	return nil
 }
 
 func (api BankAPI) Stop() error {
 	api.logger.Info("stopping bank API")
+
+	api.server.Stop()
+	api.logger.WithName("grpc").Info("grpc server stopped")
 
 	err := api.database.Close()
 	if err != nil {
