@@ -12,6 +12,12 @@ import (
 	"codepix/bank-api/config"
 	pixkeydatabase "codepix/bank-api/pixkey/repository/database"
 	pixkeyservice "codepix/bank-api/pixkey/service"
+	txprojection "codepix/bank-api/transaction/read/repository/projection"
+	txreadservice "codepix/bank-api/transaction/read/service"
+	txreadstream "codepix/bank-api/transaction/read/stream"
+	txcommandhandler "codepix/bank-api/transaction/write/commandhandler"
+	txwriteservice "codepix/bank-api/transaction/write/service"
+	txwritestream "codepix/bank-api/transaction/write/stream"
 	"context"
 	"errors"
 	"net"
@@ -90,6 +96,35 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 
 	pixKeyRepository := &pixkeydatabase.Database{Database: database}
 	err = pixkeyservice.Register(server, validator, pixKeyRepository)
+	if err != nil {
+		return nil, err
+	}
+
+	err = txcommandhandler.Setup(eventStore, commandBusHandler)
+	if err != nil {
+		return nil, err
+	}
+	txReadRepository, err := txprojection.New(projection)
+	if err != nil {
+		return nil, err
+	}
+	err = txreadservice.Register(server, txReadRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = txreadstream.Register(server, config, logger, eventBus)
+	if err != nil {
+		return nil, err
+	}
+	err = txwritestream.SetupWriters(eventBus)
+	if err != nil {
+		return nil, err
+	}
+	err = txwritestream.Register(logger, server, validator, commandBus, pixKeyRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = txwriteservice.Register(server, validator, commandBus, pixKeyRepository)
 	if err != nil {
 		return nil, err
 	}

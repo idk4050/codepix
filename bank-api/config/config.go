@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/caarlos0/env"
 	"github.com/subosito/gotenv"
@@ -22,6 +23,7 @@ type Config struct {
 	EventBus        eventBus
 	RPC             rpc
 	BankAuth        bankAuth
+	Transaction     transaction
 }
 
 func New() (*Config, error) {
@@ -32,6 +34,7 @@ func New() (*Config, error) {
 		EventBus:        eventBus{},
 		RPC:             rpc{},
 		BankAuth:        bankAuth{},
+		Transaction:     transaction{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -65,6 +68,7 @@ func New() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build bank auth config: %w", err)
 	}
+	env.Parse(&c.Transaction)
 	return c, nil
 }
 
@@ -152,6 +156,11 @@ func (c *bankAuth) build() error {
 	}
 	c.PreviousValidationKey = previousValidationKey
 	return nil
+}
+
+type transaction struct {
+	BusBlockDuration time.Duration `env:"TX_BUS_BLOCK_DURATION"`
+	BusMaxPendingAge time.Duration `env:"TX_BUS_MAX_PENDING_AGE"`
 }
 
 func escapeNewLines(str string) string {

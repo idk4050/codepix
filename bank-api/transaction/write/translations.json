@@ -1,0 +1,32 @@
+{
+  "StartRequest": {
+    "en_US": {
+      "field_names": {
+        "SenderId": "Sender ID",
+        "ReceiverKey": "Receiver key",
+        "Amount": "Amount",
+        "Description": "Description"
+      }
+    },
+    "pt_BR": {
+      "field_names": {
+        "SenderId": "ID do emissor",
+        "ReceiverKey": "Chave do recebedor",
+        "Amount": "Valor",
+        "Description": "Descrição"
+      }
+    }
+  },
+  "FailRequest": {
+    "en_US": {
+      "field_names": {
+        "Reason": "Reason"
+      }
+    },
+    "pt_BR": {
+      "field_names": {
+        "Reason": "Motivo"
+      }
+    }
+  }
+}
