@@ -1,0 +1,15 @@
+version: "3.8"
+
+networks:
+  net:
+
+services:
+  api:
+    image: localhost:2000/bank-api
+    build: .
+    networks:
+      - net
+    ports:
+      - "$BANK_API_PORT:$BANK_API_PORT"
+    volumes:
+      - .:/go/src/bank-api

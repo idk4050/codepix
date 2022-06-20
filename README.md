@@ -2,6 +2,8 @@
 
 [Customer API README](customer-api/README.md)
 
+[Bank API README](bank-api/README.md)
+
 <br>
 
 ## Development
