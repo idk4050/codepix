@@ -1,0 +1,118 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: storeprojection
+  namespace: codepix-bank-api
+spec:
+  clusterIP: None
+  ports:
+    - port: 4003
+  selector:
+    name: storeprojection
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: storeprojection
+  namespace: codepix-bank-api
+spec:
+  replicas: 3
+  podManagementPolicy: Parallel
+  serviceName: storeprojection
+  selector:
+    matchLabels:
+      name: storeprojection
+  volumeClaimTemplates:
+    - metadata:
+        name: storeprojection-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  template:
+    metadata:
+      labels:
+        name: storeprojection
+    spec:
+      volumes:
+        - name: storeprojection-secrets
+          secret:
+            secretName: storeprojection
+            defaultMode: 0600
+      containers:
+        - name: storeprojection
+          image: docker.io/mongo:6.0.1
+          ports:
+            - containerPort: 4003
+          resources: {}
+          volumeMounts:
+            - name: storeprojection-data
+              mountPath: /data/db
+            - name: storeprojection-secrets
+              mountPath: /data/secrets
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              logpath="/proc/1/fd/1"
+              mongod --logpath "$logpath" --fork || exit 1
+
+              for i in $(seq 30); do
+                ok=`mongosh admin --quiet --eval "!!db.stats().ok"`
+                [ "$ok" = "true" ] && break
+                sleep 1
+              done
+              [ "$ok" != "true" ] && exit 1
+
+              mongosh admin --quiet --eval "db.createUser({
+                user: '$SP_ADMIN_USER',
+                pwd: '$SP_ADMIN_PASSWORD',
+                roles: [{ role: 'root', db: 'admin' }]
+              })" > "$logpath"
+
+              mongosh "$SP_NAME" --username "$SP_ADMIN_USER" --password "$SP_ADMIN_PASSWORD" \
+                --authenticationDatabase admin --quiet --eval "db.createUser({
+                user: '$SP_USER',
+                pwd: '$SP_PASSWORD',
+                roles: [{ role: 'readWrite', db: '$SP_NAME' }]
+              })" > "$logpath"
+
+              mongod --logpath "$logpath" --shutdown || exit 1
+              mongod --logpath "$logpath" \
+                --bind_ip_all \
+                --port "$SP_PORT" \
+                --auth \
+                --replSet "$SP_REPLICA_SET_NAME" \
+                --keyFile /data/secrets/SP_REPLICA_SET_KEY || exit 1
+          lifecycle:
+            postStart:
+              exec:
+                command:
+                  - "/bin/sh"
+                  - "-c"
+                  - |
+                    [ "$(hostname)" != storeprojection-0 ] && exit 0
+
+                    service="storeprojection.codepix-bank-api.svc.cluster.local"
+                    args="admin --port $SP_PORT --username $SP_ADMIN_USER --password $SP_ADMIN_PASSWORD"
+
+                    for i in $(seq 6); do
+                      ok=$(mongosh $args --quiet --eval "!!rs.status().ok")
+                      [ "$ok" = "true" ] && break
+
+                      sleep 5
+                      mongosh $args --quiet --eval "rs.initiate({
+                        _id: '$SP_REPLICA_SET_NAME', members: [
+                        { _id: 0, host: 'storeprojection-0.$service:$SP_PORT', priority: 1 },
+                        { _id: 1, host: 'storeprojection-1.$service:$SP_PORT', priority: 0.5 },
+                        { _id: 2, host: 'storeprojection-2.$service:$SP_PORT', priority: 0.5 }
+                      ]})" > /proc/1/fd/1
+                    done
+                    [ "$ok" = "true" ] && exit 0 || exit 1
+          envFrom:
+            - configMapRef:
+                name: storeprojection
+            - secretRef:
+                name: storeprojection

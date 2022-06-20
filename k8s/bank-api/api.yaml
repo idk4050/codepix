@@ -44,3 +44,7 @@ spec:
                 name: eventstore
             - secretRef:
                 name: eventstore
+            - configMapRef:
+                name: storeprojection
+            - secretRef:
+                name: storeprojection

@@ -13,14 +13,16 @@ import (
 )
 
 type Config struct {
-	Database   database
-	EventStore eventStore
+	Database        database
+	EventStore      eventStore
+	StoreProjection storeProjection
 }
 
 func New() (*Config, error) {
 	c := &Config{
-		Database:   database{},
-		EventStore: eventStore{},
+		Database:        database{},
+		EventStore:      eventStore{},
+		StoreProjection: storeProjection{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -33,6 +35,10 @@ func New() (*Config, error) {
 	env.Parse(&c.EventStore)
 	if reflect.DeepEqual(c.EventStore, eventStore{}) {
 		return nil, errors.New("failed to load event store config")
+	}
+	env.Parse(&c.StoreProjection)
+	if reflect.DeepEqual(c.StoreProjection, storeProjection{}) {
+		return nil, errors.New("failed to load store projection config")
 	}
 	return c, nil
 }
@@ -69,4 +75,13 @@ type eventStore struct {
 	Name           string   `env:"ES_NAME"`
 	User           string   `env:"ES_USER"`
 	Password       string   `env:"ES_PASSWORD"`
+}
+
+type storeProjection struct {
+	InMemory       bool     `env:"SP_IN_MEMORY"`
+	ReplicaSetName string   `env:"SP_REPLICA_SET_NAME"`
+	Hosts          []string `env:"SP_HOSTS"`
+	Name           string   `env:"SP_NAME"`
+	User           string   `env:"SP_USER"`
+	Password       string   `env:"SP_PASSWORD"`
 }
