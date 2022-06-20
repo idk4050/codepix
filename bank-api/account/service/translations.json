@@ -1,0 +1,16 @@
+{
+  "RegisterRequest": {
+    "en_US": {
+      "field_names": {
+        "Number": "Account number",
+        "OwnerName": "Owner name"
+      }
+    },
+    "pt_BR": {
+      "field_names": {
+        "Number": "Número da conta",
+        "OwnerName": "Nome do titular"
+      }
+    }
+  }
+}

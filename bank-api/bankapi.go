@@ -1,6 +1,9 @@
 package bankapi
 
 import (
+	accountusecase "codepix/bank-api/account/interactor/usecase"
+	accountdatabase "codepix/bank-api/account/repository/database"
+	accountservice "codepix/bank-api/account/service"
 	"codepix/bank-api/adapters/commandbus"
 	"codepix/bank-api/adapters/databaseclient"
 	"codepix/bank-api/adapters/eventstore"
@@ -73,6 +76,13 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 		),
 	)
 
+	accountRepository := &accountdatabase.Database{DB: database}
+	accountInteractor := &accountusecase.Usecase{Repository: accountRepository}
+	err = accountservice.Register(server, validator, accountInteractor, accountRepository)
+	if err != nil {
+		return nil, err
+	}
+
 	reflection.Register(server)
 	bankAPI := &BankAPI{
 		config:     config,
@@ -87,7 +97,9 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 }
 
 func (api BankAPI) Start(ctx context.Context) error {
-	err := api.database.AutoMigrate()
+	err := api.database.AutoMigrate(
+		&accountdatabase.Account{},
+	)
 	if err != nil {
 		return err
 	}

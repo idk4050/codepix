@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package account;
+option go_package = "codepix/bank-api/account/service/proto";
+
+message RegisterRequest {
+  string number = 1;     // @gotags: validate:"required,max=100" mod:"trim"
+  string owner_name = 2; // @gotags: validate:"required,max=100" mod:"trim"
+}
+message RegisterReply { bytes id = 1; }
+
+message FindRequest {
+  bytes id = 1; // @gotags: validate:"required"
+}
+message FindReply {
+  string number = 2;
+  string owner_name = 3;
+}
+
+service AccountService {
+  rpc Register(RegisterRequest) returns (RegisterReply) {};
+  rpc Find(FindRequest) returns (FindReply) {};
+}
