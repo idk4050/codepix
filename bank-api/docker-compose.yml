@@ -8,6 +8,9 @@ volumes:
   eventstore-data:
   eventstore-secondary-data:
   eventstore-arbiter-data:
+  storeprojection-data:
+  storeprojection-secondary-data:
+  storeprojection-arbiter-data:
 
 services:
   api:
@@ -118,3 +121,79 @@ services:
       MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: $ES_ROOT_PASSWORD
     volumes:
       - eventstore-arbiter-data:/data/db
+
+  storeprojection:
+    image: localhost:2000/bank-api-storeprojection
+    build:
+      context: .
+      dockerfile: storeprojection.Dockerfile
+    networks:
+      - net
+    ports:
+      - $SP_PRIMARY_PORT:$SP_PRIMARY_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $SP_PRIMARY_HOST
+      MONGODB_PORT_NUMBER: $SP_PRIMARY_PORT
+
+      MONGODB_REPLICA_SET_MODE: primary
+      MONGODB_REPLICA_SET_NAME: $SP_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $SP_REPLICA_SET_KEY
+
+      MONGODB_DATABASE: $SP_NAME
+      MONGODB_USERNAME: $SP_USER
+      MONGODB_PASSWORD: $SP_PASSWORD
+
+      MONGODB_ROOT_USERNAME: $SP_ROOT_USER
+      MONGODB_ROOT_PASSWORD: $SP_ROOT_PASSWORD
+    volumes:
+      - storeprojection-data:/data/db
+
+  storeprojection-secondary:
+    image: localhost:2000/bank-api-storeprojection
+    build:
+      context: .
+      dockerfile: storeprojection.Dockerfile
+    networks:
+      - net
+    depends_on:
+      - storeprojection
+    ports:
+      - $SP_SECONDARY_PORT:$SP_SECONDARY_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $SP_SECONDARY_HOST
+      MONGODB_PORT_NUMBER: $SP_SECONDARY_PORT
+
+      MONGODB_REPLICA_SET_MODE: secondary
+      MONGODB_REPLICA_SET_NAME: $SP_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $SP_REPLICA_SET_KEY
+
+      MONGODB_INITIAL_PRIMARY_HOST: $SP_PRIMARY_HOST
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: $SP_PRIMARY_PORT
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: $SP_ROOT_PASSWORD
+    volumes:
+      - storeprojection-secondary-data:/data/db
+
+  storeprojection-arbiter:
+    image: localhost:2000/bank-api-storeprojection
+    build:
+      context: .
+      dockerfile: storeprojection.Dockerfile
+    networks:
+      - net
+    depends_on:
+      - storeprojection
+    ports:
+      - $SP_ARBITER_PORT:$SP_ARBITER_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $SP_ARBITER_HOST
+      MONGODB_PORT_NUMBER: $SP_ARBITER_PORT
+
+      MONGODB_REPLICA_SET_MODE: arbiter
+      MONGODB_REPLICA_SET_NAME: $SP_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $SP_REPLICA_SET_KEY
+
+      MONGODB_INITIAL_PRIMARY_HOST: $SP_PRIMARY_HOST
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: $SP_PRIMARY_PORT
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: $SP_ROOT_PASSWORD
+    volumes:
+      - storeprojection-arbiter-data:/data/db

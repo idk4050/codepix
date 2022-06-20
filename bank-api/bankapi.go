@@ -3,6 +3,7 @@ package bankapi
 import (
 	"codepix/bank-api/adapters/databaseclient"
 	"codepix/bank-api/adapters/eventstore"
+	"codepix/bank-api/adapters/projectionclient"
 	"codepix/bank-api/config"
 	"context"
 
@@ -18,6 +19,7 @@ type BankAPI struct {
 	logger     logr.Logger
 	database   *gorm.DB
 	eventStore *eventstore.EventStore
+	projection *projectionclient.StoreProjection
 }
 
 func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
@@ -33,11 +35,16 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+	projection, err := projectionclient.Open(config, logger, eventStore.Outbox)
+	if err != nil {
+		return nil, err
+	}
 	bankAPI := &BankAPI{
 		config:     config,
 		logger:     logger,
 		database:   database,
 		eventStore: eventStore,
+		projection: projection,
 	}
 	return bankAPI, nil
 }
