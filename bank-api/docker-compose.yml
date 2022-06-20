@@ -5,6 +5,9 @@ networks:
 
 volumes:
   database-data:
+  eventstore-data:
+  eventstore-secondary-data:
+  eventstore-arbiter-data:
 
 services:
   api:
@@ -39,3 +42,79 @@ services:
       PGSSLMODE: $DB_SSLMODE
     volumes:
       - database-data:/var/lib/postgresql/data
+
+  eventstore:
+    image: localhost:2000/bank-api-eventstore
+    build:
+      context: .
+      dockerfile: eventstore.Dockerfile
+    networks:
+      - net
+    ports:
+      - $ES_PRIMARY_PORT:$ES_PRIMARY_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $ES_PRIMARY_HOST
+      MONGODB_PORT_NUMBER: $ES_PRIMARY_PORT
+
+      MONGODB_REPLICA_SET_MODE: primary
+      MONGODB_REPLICA_SET_NAME: $ES_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $ES_REPLICA_SET_KEY
+
+      MONGODB_DATABASE: $ES_NAME
+      MONGODB_USERNAME: $ES_USER
+      MONGODB_PASSWORD: $ES_PASSWORD
+
+      MONGODB_ROOT_USERNAME: $ES_ROOT_USER
+      MONGODB_ROOT_PASSWORD: $ES_ROOT_PASSWORD
+    volumes:
+      - eventstore-data:/data/db
+
+  eventstore-secondary:
+    image: localhost:2000/bank-api-eventstore
+    build:
+      context: .
+      dockerfile: eventstore.Dockerfile
+    networks:
+      - net
+    depends_on:
+      - eventstore
+    ports:
+      - $ES_SECONDARY_PORT:$ES_SECONDARY_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $ES_SECONDARY_HOST
+      MONGODB_PORT_NUMBER: $ES_SECONDARY_PORT
+
+      MONGODB_REPLICA_SET_MODE: secondary
+      MONGODB_REPLICA_SET_NAME: $ES_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $ES_REPLICA_SET_KEY
+
+      MONGODB_INITIAL_PRIMARY_HOST: $ES_PRIMARY_HOST
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: $ES_PRIMARY_PORT
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: $ES_ROOT_PASSWORD
+    volumes:
+      - eventstore-secondary-data:/data/db
+
+  eventstore-arbiter:
+    image: localhost:2000/bank-api-eventstore
+    build:
+      context: .
+      dockerfile: eventstore.Dockerfile
+    networks:
+      - net
+    depends_on:
+      - eventstore
+    ports:
+      - $ES_ARBITER_PORT:$ES_ARBITER_PORT
+    environment:
+      MONGODB_ADVERTISED_HOSTNAME: $ES_ARBITER_HOST
+      MONGODB_PORT_NUMBER: $ES_ARBITER_PORT
+
+      MONGODB_REPLICA_SET_MODE: arbiter
+      MONGODB_REPLICA_SET_NAME: $ES_REPLICA_SET_NAME
+      MONGODB_REPLICA_SET_KEY: $ES_REPLICA_SET_KEY
+
+      MONGODB_INITIAL_PRIMARY_HOST: $ES_PRIMARY_HOST
+      MONGODB_INITIAL_PRIMARY_PORT_NUMBER: $ES_PRIMARY_PORT
+      MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD: $ES_ROOT_PASSWORD
+    volumes:
+      - eventstore-arbiter-data:/data/db

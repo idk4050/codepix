@@ -2,6 +2,7 @@ package bankapi
 
 import (
 	"codepix/bank-api/adapters/databaseclient"
+	"codepix/bank-api/adapters/eventstore"
 	"codepix/bank-api/config"
 	"context"
 
@@ -13,9 +14,10 @@ import (
 )
 
 type BankAPI struct {
-	config   config.Config
-	logger   logr.Logger
-	database *gorm.DB
+	config     config.Config
+	logger     logr.Logger
+	database   *gorm.DB
+	eventStore *eventstore.EventStore
 }
 
 func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
@@ -27,10 +29,15 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+	eventStore, err := eventstore.Open(config, logger)
+	if err != nil {
+		return nil, err
+	}
 	bankAPI := &BankAPI{
-		config:   config,
-		logger:   logger,
-		database: database,
+		config:     config,
+		logger:     logger,
+		database:   database,
+		eventStore: eventStore,
 	}
 	return bankAPI, nil
 }
@@ -40,9 +47,16 @@ func (api BankAPI) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	api.eventStore.Outbox.Start()
 	return nil
 }
 
 func (api BankAPI) Stop() error {
+	err := api.eventStore.Outbox.Close()
+	if err != nil {
+		api.logger.Error(err, "event store outbox failed to close")
+		return err
+	}
 	return nil
 }

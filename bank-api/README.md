@@ -13,6 +13,8 @@ Example command:
 
 The `test` env files are meant to be used for quick testing, manual or automated. Databases are setup in memory and the program may behave differently than in `production`.
 
+In the `test` environment, the event store adapter requires a mongodb binary to run 'in memory'. After creating the `.env` file, you'll need to change the `ES_IN_MEMORY_BINARY_PATH` variable manually.
+
 ### Production environment
 
 The `production` env files are meant to be used for testing with Docker. See the main [README](../README.md) file for instructions on how to setup the Docker services.

@@ -12,12 +12,14 @@ import (
 )
 
 type Config struct {
-	Database database
+	Database   database
+	EventStore eventStore
 }
 
 func New() (*Config, error) {
 	c := &Config{
-		Database: database{},
+		Database:   database{},
+		EventStore: eventStore{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -26,6 +28,10 @@ func New() (*Config, error) {
 	env.Parse(&c.Database)
 	if c.Database == (database{}) {
 		return nil, errors.New("failed to load database config")
+	}
+	env.Parse(&c.EventStore)
+	if c.EventStore == (eventStore{}) {
+		return nil, errors.New("failed to load event store config")
 	}
 	return c, nil
 }
@@ -53,4 +59,16 @@ type database struct {
 	Password         string `env:"DB_PASSWORD"`
 	PasswordFromFile string `env:"DB_PASSWORD_FILE,file"`
 	SSLMode          string `env:"DB_SSLMODE"`
+}
+
+type eventStore struct {
+	InMemory           bool   `env:"ES_IN_MEMORY"`
+	InMemoryBinaryPath string `env:"ES_IN_MEMORY_BINARY_PATH"`
+	Host               string `env:"ES_HOST"`
+	Port               string `env:"ES_PORT"`
+	Name               string `env:"ES_NAME"`
+	User               string `env:"ES_USER"`
+	Password           string `env:"ES_PASSWORD"`
+	PasswordFromFile   string `env:"ES_PASSWORD_FILE,file"`
+	ReplicaSetName     string `env:"ES_REPLICA_SET_NAME"`
 }
