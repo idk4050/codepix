@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 
 	"github.com/caarlos0/env"
@@ -12,12 +13,14 @@ import (
 )
 
 type Config struct {
-	Database database
+	Database   database
+	EventStore eventStore
 }
 
 func New() (*Config, error) {
 	c := &Config{
-		Database: database{},
+		Database:   database{},
+		EventStore: eventStore{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -26,6 +29,10 @@ func New() (*Config, error) {
 	env.Parse(&c.Database)
 	if c.Database == (database{}) {
 		return nil, errors.New("failed to load database config")
+	}
+	env.Parse(&c.EventStore)
+	if reflect.DeepEqual(c.EventStore, eventStore{}) {
+		return nil, errors.New("failed to load event store config")
 	}
 	return c, nil
 }
@@ -53,4 +60,13 @@ type database struct {
 	Password         string `env:"DB_PASSWORD"`
 	SSLMode          string `env:"DB_SSLMODE"`
 	AutoMigrate      bool   `env:"DB_AUTO_MIGRATE"`
+}
+
+type eventStore struct {
+	InMemory       bool     `env:"ES_IN_MEMORY"`
+	ReplicaSetName string   `env:"ES_REPLICA_SET_NAME"`
+	Hosts          []string `env:"ES_HOSTS"`
+	Name           string   `env:"ES_NAME"`
+	User           string   `env:"ES_USER"`
+	Password       string   `env:"ES_PASSWORD"`
 }

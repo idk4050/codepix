@@ -40,3 +40,7 @@ spec:
                 name: database
             - secretRef:
                 name: database
+            - configMapRef:
+                name: eventstore
+            - secretRef:
+                name: eventstore
