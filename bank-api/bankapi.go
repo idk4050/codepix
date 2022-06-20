@@ -1,16 +1,20 @@
 package bankapi
 
 import (
+	"codepix/bank-api/config"
 	"context"
 
 	"go.uber.org/zap"
 )
 
 type BankAPI struct {
+	config config.Config
 }
 
-func New(loggerImpl *zap.Logger) (*BankAPI, error) {
-	bankAPI := &BankAPI{}
+func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
+	bankAPI := &BankAPI{
+		config: config,
+	}
 	return bankAPI, nil
 }
 

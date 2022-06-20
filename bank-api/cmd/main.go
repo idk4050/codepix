@@ -2,6 +2,7 @@ package main
 
 import (
 	bankapi "codepix/bank-api"
+	"codepix/bank-api/config"
 	"context"
 	"os"
 	"os/signal"
@@ -15,7 +16,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	bankAPI, err := bankapi.New(logger)
+	config, err := config.New()
+	if err != nil {
+		logger.Fatal("failed to create config", zap.Error(err))
+	}
+	bankAPI, err := bankapi.New(*config, logger)
 	if err != nil {
 		logger.Fatal("failed to create bank API", zap.Error(err))
 	}
