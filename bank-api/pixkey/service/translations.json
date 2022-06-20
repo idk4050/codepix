@@ -1,0 +1,26 @@
+{
+  "RegisterRequest": {
+    "en_US": {
+      "error_messages": {
+        "cpf_key": "Invalid CPF Pix key",
+        "phone_key": "Invalid phone Pix key",
+        "email_key": "Invalid email Pix key"
+      },
+      "field_names": {
+        "Type": "Key type",
+        "Key": "Key"
+      }
+    },
+    "pt_BR": {
+      "error_messages": {
+        "cpf_key": "Chave Pix CPF inválida",
+        "phone_key": "Chave Pix telefone inválida",
+        "email_key": "Chave Pix email inválida"
+      },
+      "field_names": {
+        "Type": "Tipo de chave",
+        "Key": "Chave"
+      }
+    }
+  }
+}
