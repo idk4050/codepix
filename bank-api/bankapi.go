@@ -12,6 +12,9 @@ import (
 	"codepix/bank-api/adapters/validator"
 	"codepix/bank-api/bank/auth"
 	"codepix/bank-api/config"
+	pixkeyusecase "codepix/bank-api/pixkey/interactor/usecase"
+	pixkeydatabase "codepix/bank-api/pixkey/repository/database"
+	pixkeyservice "codepix/bank-api/pixkey/service"
 	"context"
 	"errors"
 	"net"
@@ -83,6 +86,16 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 		return nil, err
 	}
 
+	pixKeyRepository := &pixkeydatabase.Database{DB: database}
+	pixKeyInteractor := &pixkeyusecase.Usecase{
+		Repository:        pixKeyRepository,
+		AccountRepository: accountRepository,
+	}
+	err = pixkeyservice.Register(server, validator, pixKeyInteractor, pixKeyRepository, accountRepository)
+	if err != nil {
+		return nil, err
+	}
+
 	reflection.Register(server)
 	bankAPI := &BankAPI{
 		config:     config,
@@ -99,6 +112,7 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 func (api BankAPI) Start(ctx context.Context) error {
 	err := api.database.AutoMigrate(
 		&accountdatabase.Account{},
+		&pixkeydatabase.PixKey{},
 	)
 	if err != nil {
 		return err

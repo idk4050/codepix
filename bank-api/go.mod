@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
+	github.com/cuducos/go-cpf v0.0.1
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
 	github.com/go-playground/locales v0.14.0

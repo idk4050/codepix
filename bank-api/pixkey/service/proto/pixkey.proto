@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package pixkey;
+option go_package = "codepix/bank-api/pixkey/service/proto";
+
+enum Type {
+  _ = 0;
+  CPF = 1;
+  Phone = 2;
+  Email = 3;
+}
+
+message RegisterRequest {
+  Type type = 1;        // @gotags: validate:"required,oneof=1 2 3"
+  string key = 2;       // @gotags: validate:"required,max=100" mod:"trim"
+  bytes account_id = 3; // @gotags: validate:"required"
+}
+message RegisterReply { bytes id = 1; }
+
+message FindRequest {
+  bytes id = 1; // @gotags: validate:"required"
+}
+message FindReply {
+  Type type = 1;
+  string key = 2;
+}
+
+service PixKeyService {
+  rpc Register(RegisterRequest) returns (RegisterReply) {};
+  rpc Find(FindRequest) returns (FindReply) {};
+}
