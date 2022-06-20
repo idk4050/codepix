@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package transaction;
+option go_package = "codepix/api/src/transaction/stream/proto";
+
+message StartedOut {
+  optional TransactionStarted started = 1;
+  optional TransactionError error = 2;
+}
+message StartedIn {
+  // @gotags: validate:"excluded_with=fail"
+  optional ConfirmTransaction confirm = 1;
+  // @gotags: validate:"excluded_with=confirm"
+  optional FailTransaction fail = 2;
+}
+
+message ConfirmedOut {
+  optional TransactionConfirmed confirmed = 1;
+  optional TransactionError error = 2;
+}
+message ConfirmedIn {
+  // @gotags: validate:"excluded_with=fail"
+  optional CompleteTransaction complete = 1;
+  // @gotags: validate:"excluded_with=complete"
+  optional FailTransaction fail = 2;
+}
+
+service TransactionStream {
+  rpc Started(stream StartedIn) returns (stream StartedOut) {};
+  rpc Confirmed(stream ConfirmedIn) returns (stream ConfirmedOut) {};
+}
+
+// out
+message TransactionStarted {
+  bytes id = 1;
+  string receiver_account_number = 4;
+  uint64 amount = 5;
+  string description = 6;
+}
+
+message TransactionConfirmed { bytes id = 1; }
+
+message TransactionError {
+  bytes id = 1;
+  int32 code = 2;
+  string message = 3;
+}
+
+// in
+message ConfirmTransaction {
+  bytes id = 1; // @gotags: validate:"required"
+}
+
+message CompleteTransaction {
+  bytes id = 1; // @gotags: validate:"required"
+}
+
+message FailTransaction {
+  bytes id = 1;      // @gotags: validate:"required"
+  string reason = 2; // @gotags: validate:"max=100" mod:"trim"
+}

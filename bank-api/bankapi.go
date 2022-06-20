@@ -15,6 +15,10 @@ import (
 	pixkeyusecase "codepix/bank-api/pixkey/interactor/usecase"
 	pixkeydatabase "codepix/bank-api/pixkey/repository/database"
 	pixkeyservice "codepix/bank-api/pixkey/service"
+	transactioncommandhandler "codepix/bank-api/transaction/commandhandler"
+	transactionprojection "codepix/bank-api/transaction/readrepository/projection"
+	transactionservice "codepix/bank-api/transaction/service"
+	transactionstream "codepix/bank-api/transaction/stream"
 	"context"
 	"errors"
 	"net"
@@ -92,6 +96,25 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 		AccountRepository: accountRepository,
 	}
 	err = pixkeyservice.Register(server, validator, pixKeyInteractor, pixKeyRepository, accountRepository)
+	if err != nil {
+		return nil, err
+	}
+
+	err = transactioncommandhandler.Setup(eventStore, commandBusHandler)
+	if err != nil {
+		return nil, err
+	}
+	transactionRepository, err := transactionprojection.New(projection)
+	if err != nil {
+		return nil, err
+	}
+	err = transactionservice.Register(server, validator, commandBus,
+		transactionRepository, accountRepository, pixKeyRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = transactionstream.Register(server, validator, commandBus, eventStore.Outbox,
+		accountRepository)
 	if err != nil {
 		return nil, err
 	}

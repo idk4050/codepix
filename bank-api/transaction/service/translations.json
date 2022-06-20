@@ -1,0 +1,20 @@
+{
+  "StartRequest": {
+    "en_US": {
+      "field_names": {
+        "SenderAccountNumber": "Sender account number",
+        "ReceiverKey": "Receiver key",
+        "Amount": "Amount",
+        "Description": "Description"
+      }
+    },
+    "pt_BR": {
+      "field_names": {
+        "SenderAccountNumber": "Número da conta do emissor",
+        "ReceiverKey": "Chave do recebedor",
+        "Amount": "Valor",
+        "Description": "Descrição"
+      }
+    }
+  }
+}
