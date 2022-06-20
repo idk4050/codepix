@@ -1,0 +1,6 @@
+syntax = "proto3";
+
+package rpc;
+option go_package = "codepix/bank-api/adapters/rpc/proto";
+
+message ValidationError { map<string, string> errors = 1; }

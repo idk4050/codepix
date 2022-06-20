@@ -30,3 +30,13 @@ To debug in the `production` environment, you can edit the resulting `.env` as f
 2. change the port of the service you are debugging to prevent conflict with the existing instance
 
 Now you can debug the service locally with `production` dependencies.
+
+<br>
+
+## Browsing the API
+
+To browse the API, use [grpc-ui](https://github.com/fullstorydev/grpcui). Example command:
+
+```
+grpcui -plaintext localhost:4000
+```

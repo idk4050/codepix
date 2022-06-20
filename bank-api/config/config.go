@@ -15,6 +15,7 @@ type Config struct {
 	Database        database
 	EventStore      eventStore
 	StoreProjection storeProjection
+	RPC             rpc
 }
 
 func New() (*Config, error) {
@@ -22,6 +23,7 @@ func New() (*Config, error) {
 		Database:        database{},
 		EventStore:      eventStore{},
 		StoreProjection: storeProjection{},
+		RPC:             rpc{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -38,6 +40,10 @@ func New() (*Config, error) {
 	env.Parse(&c.StoreProjection)
 	if c.StoreProjection == (storeProjection{}) {
 		return nil, errors.New("failed to load store projection config")
+	}
+	env.Parse(&c.RPC)
+	if c.RPC == (rpc{}) {
+		return nil, errors.New("failed to load RPC config")
 	}
 	return c, nil
 }
@@ -89,4 +95,8 @@ type storeProjection struct {
 	Password           string `env:"SP_PASSWORD"`
 	PasswordFromFile   string `env:"SP_PASSWORD_FILE,file"`
 	ReplicaSetName     string `env:"SP_REPLICA_SET_NAME"`
+}
+
+type rpc struct {
+	Port string `env:"RPC_PORT"`
 }
