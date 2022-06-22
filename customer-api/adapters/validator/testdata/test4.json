@@ -1,0 +1,9 @@
+{
+  "TestStruct": {
+    "en_US": {
+      "123": {
+        "test_tag": "test"
+      }
+    }
+  }
+}

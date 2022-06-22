@@ -1,0 +1,41 @@
+version: "3.8"
+
+networks:
+  net:
+
+volumes:
+  database-data:
+
+services:
+  api:
+    image: localhost:2000/customer-api
+    build: .
+    networks:
+      - net
+    depends_on:
+      - database
+    ports:
+      - "$CUSTOMER_API_PORT:$CUSTOMER_API_PORT"
+    volumes:
+      - .:/go/src/customer-api
+
+  database:
+    image: localhost:2000/customer-api-database
+    build:
+      context: .
+      dockerfile: database.Dockerfile
+    networks:
+      - net
+    ports:
+      - "$DB_PORT:$DB_PORT"
+    environment:
+      PGHOST: $DB_HOST
+      PGPORT: $DB_PORT
+      POSTGRES_DB: $DB_NAME
+      PGDATABASE: $DB_NAME
+      POSTGRES_USER: $DB_USER
+      PGUSER: $DB_USER
+      POSTGRES_PASSWORD: $DB_PASSWORD
+      PGSSLMODE: $DB_SSLMODE
+    volumes:
+      - database-data:/var/lib/postgresql/data

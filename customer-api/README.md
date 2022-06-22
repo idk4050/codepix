@@ -1,0 +1,63 @@
+# Customer API
+
+## Development
+
+To create an env file from the example env files, run the `create-env-file.sh` script in `config/` with `test` or `production` as the only argument. A set of `.env.example` files will be selected accordingly to create the resulting `.env` file. The `.env` file will be loaded at runtime but it won't override existing variables.
+
+Example command: 
+```
+./config/create-env-file.sh test
+```
+
+### Test environment
+
+The `test` env files are meant to be used for quick testing, manual or automated. Databases are setup in memory and the program may behave differently than in `production`.
+
+### Production environment
+
+The `production` env files are meant to be used for testing with Docker. See the main [README](../README.md) file for instructions on how to setup the Docker services.
+
+To run tests in the `production` environment, you can use:
+```
+docker container exec -it <container_id> go test ./...
+```
+
+To debug in the `production` environment, you can edit the resulting `.env` as follows:
+
+1. set the hostnames of other service dependencies from `localhost` to your local Docker address (usually `172.17.0.1`)
+2. change the port of the service you are debugging to prevent conflict with the existing instance
+
+Now you can debug the service locally with `production` dependencies.
+
+<br>
+
+## Browsing the API
+
+To browse the API, use [vscode-restclient](https://github.com/Huachao/vscode-restclient). The http sheet is inside the `api-docs/` directory, which is also statically served on the public endpoint `/api-docs/`
+
+The `host` variable needs to be manually changed before sending any requests.
+
+Example value:
+```
+@host = http://localhost:3000
+```
+
+<br>
+
+## Authentication
+
+Authentication is done via JWT.
+
+Sign-up and sign-in use single-use tokens, which are printed to the terminal rather than being sent via email for the time being.
+
+### User authentication
+
+Validation keys can be rotated through the `USER_AUTH_PREVIOUS_VALIDATION_KEY` variable. During authentication, it will be tried if the current one fails.
+
+### Bank authentication
+
+Banks can also use their API keys to request tokens for use in the Bank API.
+
+Token signing is controlled by the Customer API while token validation is done by the Bank API.
+
+See the Bank API [README](../bank-api/README.md#authentication) for more information.

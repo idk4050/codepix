@@ -1,0 +1,88 @@
+@host = {{$processEnv CUSTOMER_API_HOST}}
+@api = {{host}}/api
+
+@email = customer@example.com
+
+# @name start_signup
+POST {{api}}/signup-request
+
+{
+  "name": "test",
+  "email": "{{email}}"
+}
+###
+# @name finish_signup
+# @prompt signup_token the token sent via email
+DELETE {{api}}/signup-request/{{signup_token}}
+###
+
+# @name start_signin
+POST {{api}}/signin-request
+
+{
+  "email": "{{email}}"
+}
+###
+# @name finish_signin
+# @prompt signin_token the token sent via email
+DELETE {{api}}/signin-request/{{signin_token}}
+###
+@cookie = {{finish_signin.response.headers.Set-Cookie}}
+@customer_id = {{finish_signin.response.body.customer_id}}
+
+# @name find_customer
+GET {{api}}/customer/{{customer_id}}
+Cookie: {{cookie}}
+###
+# @name list_all_banks
+GET {{api}}/customer/{{customer_id}}/banks
+Cookie: {{cookie}}
+###
+
+# @name register_bank
+POST {{api}}/bank
+Cookie: {{cookie}}
+
+{
+  "code": 1,
+  "name": "test"
+}
+###
+@bank_id = {{register_bank.response.body.id}}
+
+# @name find_bank
+GET {{api}}/bank/{{bank_id}}
+Cookie: {{cookie}}
+###
+# @name remove_bank
+DELETE {{api}}/bank/{{bank_id}}
+Cookie: {{cookie}}
+###
+# @name list_all_apikeys
+GET {{api}}/bank/{{bank_id}}/apikeys
+Cookie: {{cookie}}
+###
+
+# @name create_apikey
+POST {{api}}/bank/{{bank_id}}/apikeys
+Cookie: {{cookie}}
+
+{
+  "name": "test"
+}
+###
+@apikey_id = {{create_apikey.response.body.id}}
+@apikey_secret = {{create_apikey.response.body.secret}}
+
+# @name remove_apikey
+DELETE {{api}}/bank/{{bank_id}}/apikeys/{{apikey_id}}
+Cookie: {{cookie}}
+###
+
+# @name authenticate_bank
+POST {{api}}/bank-auth
+
+{
+  "api_key_secret": "{{apikey_secret}}"
+}
+###

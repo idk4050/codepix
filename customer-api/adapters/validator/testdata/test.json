@@ -1,0 +1,40 @@
+{
+  "TestStruct": {
+    "en_US": {
+      "error_messages": {
+        "test_tag1": "1: It failed on field {0}!",
+        "test_tag2": "2: It failed on field {0}!",
+        "test_tag3": "3: It failed on field {0}!",
+        "test_tag4": "4: It failed on field {0}!",
+        "test_tag5": "5: It failed on field {0}!",
+        "test_tag6": "6: It failed on field {0}!",
+        "test_tag7": "7: It failed on field {0}!",
+        "test_tag8": "8: It failed on field {0}!",
+        "test_tag9": "9: It failed on field {0}!"
+      },
+      "field_names": {
+        "TestField1": "The Field 1",
+        "Struct2": "The Struct",
+        "Struct2.TestField6": "The Field 6",
+        "PointerStruct3": "The PointerStruct",
+        "PointerStruct3.TestField7": "The Field 7",
+        "Array4": "The Array",
+        "Array4.TestField8": "The Field 8",
+        "Map5": "The Map",
+        "Map5.TestField9": "The Field 9",
+        "TranslatedField": "The Translated Field"
+      }
+    }
+  },
+  "SimpleStruct": {
+    "en_US": {
+      "error_messages": {
+        "field_tag": "field tag: failed on {0}"
+      },
+      "field_names": {
+        "Field": "A field",
+        "AnotherField": "Another field"
+      }
+    }
+  }
+}
