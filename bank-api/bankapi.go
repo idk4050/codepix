@@ -8,6 +8,7 @@ import (
 	"codepix/bank-api/adapters/projectionclient"
 	"codepix/bank-api/adapters/rpc"
 	"codepix/bank-api/adapters/validator"
+	"codepix/bank-api/bank/auth"
 	"codepix/bank-api/config"
 	"context"
 	"errors"
@@ -74,11 +75,13 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 		grpc.ChainUnaryInterceptor(
 			rpc.UnaryPanicHandler(panicLogger),
 			rpc.UnaryLogger(logger),
+			auth.UnaryTokenValidator(config),
 			rpc.UnaryValidator(validator),
 		),
 		grpc.ChainStreamInterceptor(
 			rpc.StreamPanicHandler(panicLogger),
 			rpc.StreamLogger(logger),
+			auth.StreamTokenValidator(config),
 			rpc.StreamValidator(validator),
 		),
 	)

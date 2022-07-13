@@ -22,7 +22,23 @@ Example command:
 To browse the API, use [grpc-ui](https://github.com/fullstorydev/grpcui). Example command:
 
 ```
-AUTH_HEADER='auth-token: eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJiYW5rX2lkIjoiMzg2ZjhmMjctYjI4OC00YjNiLWI2ZDEtOTMyNTAyMDAzNzZhIiwiZXhwIjoxNzc4NzgyNjU5LCJpYXQiOjE2NTg3ODI2NTksIm5iZiI6MTY1ODc4MjY1OX0.r-5U7LF2KGok8OAJxqNmv4_vxkr98wt0-JtEWhbrNokQO971eesgVTuTr5kwFbsBOC5Y1ixrRO2SLIlSjwAHbnpQCWDBNIlWzBXOVNHYQJOo1ziZjmnxvJf_Br0U9ZCrbODnm1BxN4nLfVtopgVucnkoGhtadwD5WM7bD4Svo24'
+AUTH_HEADER='authorization: jjbgdLoZQMYoBtaQ5r8TTB4aXba86zAlYsELs0TDNMcKjy50bJc1iByZ7p6aTgQ0Pa1EZbdazWaubhwJ6LkTS3mMoAAmuMcnvXvR'
 
 grpcui -plaintext -reflect-header "$AUTH_HEADER" -rpc-header "$AUTH_HEADER" localhost:4000
 ```
+
+<br>
+
+## Authentication
+
+Authentication is done via JWT.
+
+The `BANK_AUTH_VALIDATION_KEY` must be derived from the bank auth signing key in the Customer API.
+
+The validation keys can be rotated through the `BANK_AUTH_PREVIOUS_VALIDATION_KEY` variable. During authentication, it will be tried if the current one fails.
+
+Banks use their API keys (created in the Customer API) to obtain tokens from the Customer API.
+
+Tokens obtained from the Customer API contain all the information required by the bank for use in the Bank API. The databases are not shared.
+
+See the Customer API [README](../customer-api/README.md#authentication) for more information.

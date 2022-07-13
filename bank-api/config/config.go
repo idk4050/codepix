@@ -1,12 +1,15 @@
 package config
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 
 	"github.com/caarlos0/env"
 	"github.com/subosito/gotenv"
@@ -18,6 +21,7 @@ type Config struct {
 	StoreProjection storeProjection
 	EventBus        eventBus
 	RPC             rpc
+	BankAuth        bankAuth
 }
 
 func New() (*Config, error) {
@@ -27,6 +31,7 @@ func New() (*Config, error) {
 		StoreProjection: storeProjection{},
 		EventBus:        eventBus{},
 		RPC:             rpc{},
+		BankAuth:        bankAuth{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -51,6 +56,14 @@ func New() (*Config, error) {
 	env.Parse(&c.RPC)
 	if c.RPC == (rpc{}) {
 		return nil, errors.New("failed to load RPC config")
+	}
+	env.Parse(&c.BankAuth)
+	if c.BankAuth == (bankAuth{}) {
+		return nil, errors.New("failed to load bank auth config")
+	}
+	err = c.BankAuth.build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build bank auth config: %w", err)
 	}
 	return c, nil
 }
@@ -109,4 +122,38 @@ type eventBus struct {
 
 type rpc struct {
 	Port string `env:"RPC_PORT"`
+}
+
+type bankAuth struct {
+	ValidationKey               any
+	ValidationKeyString         string `env:"BANK_AUTH_VALIDATION_KEY"`
+	PreviousValidationKey       any
+	PreviousValidationKeyString string `env:"BANK_AUTH_PREVIOUS_VALIDATION_KEY"`
+}
+
+func (c *bankAuth) build() error {
+	validationKeyPem, _ := pem.Decode([]byte(escapeNewLines(c.ValidationKeyString)))
+	if validationKeyPem == nil {
+		return fmt.Errorf("failed to decode validation key")
+	}
+	validationKey, err := x509.ParsePKIXPublicKey(validationKeyPem.Bytes)
+	if err != nil {
+		return err
+	}
+	c.ValidationKey = validationKey
+
+	previousValidationKeyPem, _ := pem.Decode([]byte(escapeNewLines(c.PreviousValidationKeyString)))
+	if previousValidationKeyPem == nil {
+		return fmt.Errorf("failed to decode previous validation key")
+	}
+	previousValidationKey, err := x509.ParsePKIXPublicKey(previousValidationKeyPem.Bytes)
+	if err != nil {
+		return err
+	}
+	c.PreviousValidationKey = previousValidationKey
+	return nil
+}
+
+func escapeNewLines(str string) string {
+	return strings.ReplaceAll(str, `\n`, "\n")
 }
