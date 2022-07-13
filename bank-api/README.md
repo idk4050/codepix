@@ -40,3 +40,19 @@ To browse the API, use [grpc-ui](https://github.com/fullstorydev/grpcui). Exampl
 ```
 grpcui -plaintext localhost:4000
 ```
+
+<br>
+
+## Authentication
+
+Authentication is done via JWT.
+
+The `BANK_AUTH_VALIDATION_KEY` must be derived from the bank auth signing key in the Customer API.
+
+The validation keys can be rotated through the `BANK_AUTH_PREVIOUS_VALIDATION_KEY` variable. During authentication, it will be tried if the current one fails.
+
+Banks use their API keys (created in the Customer API) to obtain tokens from the Customer API.
+
+Tokens obtained from the Customer API contain all the information required by the bank for use in the Bank API. The databases are not shared.
+
+See the Customer API [README](../customer-api/README.md#authentication) for more information.

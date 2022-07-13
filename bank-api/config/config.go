@@ -1,6 +1,8 @@
 package config
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
@@ -16,6 +18,7 @@ type Config struct {
 	EventStore      eventStore
 	StoreProjection storeProjection
 	RPC             rpc
+	BankAuth        bankAuth
 }
 
 func New() (*Config, error) {
@@ -24,6 +27,7 @@ func New() (*Config, error) {
 		EventStore:      eventStore{},
 		StoreProjection: storeProjection{},
 		RPC:             rpc{},
+		BankAuth:        bankAuth{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -44,6 +48,14 @@ func New() (*Config, error) {
 	env.Parse(&c.RPC)
 	if c.RPC == (rpc{}) {
 		return nil, errors.New("failed to load RPC config")
+	}
+	env.Parse(&c.BankAuth)
+	if c.BankAuth == (bankAuth{}) {
+		return nil, errors.New("failed to load bank auth config")
+	}
+	err = c.BankAuth.build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build bank auth config: %w", err)
 	}
 	return c, nil
 }
@@ -99,4 +111,29 @@ type storeProjection struct {
 
 type rpc struct {
 	Port string `env:"RPC_PORT"`
+}
+
+type bankAuth struct {
+	MetadataKey                 string `env:"BANK_AUTH_METADATA_KEY"`
+	ValidationKey               any
+	ValidationKeyString         string `env:"BANK_AUTH_VALIDATION_KEY"`
+	PreviousValidationKey       any
+	PreviousValidationKeyString string `env:"BANK_AUTH_PREVIOUS_VALIDATION_KEY"`
+}
+
+func (c *bankAuth) build() error {
+	validationKeyPem, _ := pem.Decode([]byte(c.ValidationKeyString))
+	validationKey, err := x509.ParsePKIXPublicKey(validationKeyPem.Bytes)
+	if err != nil {
+		return err
+	}
+	c.ValidationKey = validationKey
+
+	previousValidationKeyPem, _ := pem.Decode([]byte(c.PreviousValidationKeyString))
+	previousValidationKey, err := x509.ParsePKIXPublicKey(previousValidationKeyPem.Bytes)
+	if err != nil {
+		return err
+	}
+	c.PreviousValidationKey = previousValidationKey
+	return nil
 }

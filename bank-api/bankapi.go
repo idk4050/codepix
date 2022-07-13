@@ -7,6 +7,7 @@ import (
 	"codepix/bank-api/adapters/projectionclient"
 	"codepix/bank-api/adapters/rpc"
 	"codepix/bank-api/adapters/validator"
+	"codepix/bank-api/bank/auth"
 	"codepix/bank-api/config"
 	"context"
 	"errors"
@@ -63,10 +64,12 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 		grpc.ChainUnaryInterceptor(
 			rpc.UnaryLogger(logger),
 			rpc.UnaryValidator(validator),
+			auth.UnaryTokenValidator(config),
 		),
 		grpc.ChainStreamInterceptor(
 			rpc.StreamLogger(logger),
 			rpc.StreamValidator(validator),
+			auth.StreamTokenValidator(config),
 		),
 	)
 
