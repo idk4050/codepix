@@ -1,6 +1,7 @@
 package bankapi
 
 import (
+	"codepix/bank-api/adapters/commandbus"
 	"codepix/bank-api/adapters/databaseclient"
 	"codepix/bank-api/adapters/eventbus"
 	"codepix/bank-api/adapters/eventstore"
@@ -10,6 +11,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/looplab/eventhorizon"
+	"github.com/looplab/eventhorizon/commandhandler/bus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -21,6 +24,7 @@ type BankAPI struct {
 	eventStore *eventstore.EventStore
 	projection *projectionclient.StoreProjection
 	eventBus   *eventbus.EventBus
+	commandBus eventhorizon.CommandHandler
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*BankAPI, error) {
@@ -44,6 +48,10 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 	if err != nil {
 		return nil, err
 	}
+	commandBusHandler := bus.NewCommandHandler()
+	commandBus := eventhorizon.UseCommandHandlerMiddleware(commandBusHandler,
+		commandbus.Logger(logger),
+	)
 	bankAPI := &BankAPI{
 		logger:     logger,
 		config:     config,
@@ -51,6 +59,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 		eventStore: eventStore,
 		projection: projection,
 		eventBus:   eventBus,
+		commandBus: commandBus,
 	}
 	return bankAPI, nil
 }
