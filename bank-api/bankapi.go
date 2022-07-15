@@ -1,6 +1,7 @@
 package bankapi
 
 import (
+	"codepix/bank-api/adapters/commandbus"
 	"codepix/bank-api/adapters/databaseclient"
 	"codepix/bank-api/adapters/eventstore"
 	"codepix/bank-api/adapters/projectionclient"
@@ -9,6 +10,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/looplab/eventhorizon"
+	"github.com/looplab/eventhorizon/commandhandler/bus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
@@ -20,6 +23,7 @@ type BankAPI struct {
 	database   *gorm.DB
 	eventStore *eventstore.EventStore
 	projection *projectionclient.StoreProjection
+	commandBus eventhorizon.CommandHandler
 }
 
 func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
@@ -39,12 +43,17 @@ func New(config config.Config, loggerImpl *zap.Logger) (*BankAPI, error) {
 	if err != nil {
 		return nil, err
 	}
+	commandBusHandler := bus.NewCommandHandler()
+	commandBus := eventhorizon.UseCommandHandlerMiddleware(commandBusHandler,
+		commandbus.Logger(logger),
+	)
 	bankAPI := &BankAPI{
 		config:     config,
 		logger:     logger,
 		database:   database,
 		eventStore: eventStore,
 		projection: projection,
+		commandBus: commandBus,
 	}
 	return bankAPI, nil
 }
