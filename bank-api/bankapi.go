@@ -2,6 +2,7 @@ package bankapi
 
 import (
 	"codepix/bank-api/adapters/databaseclient"
+	"codepix/bank-api/adapters/eventbus"
 	"codepix/bank-api/adapters/eventstore"
 	"codepix/bank-api/adapters/projectionclient"
 	"codepix/bank-api/config"
@@ -19,6 +20,7 @@ type BankAPI struct {
 	database   *databaseclient.Database
 	eventStore *eventstore.EventStore
 	projection *projectionclient.StoreProjection
+	eventBus   *eventbus.EventBus
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*BankAPI, error) {
@@ -38,12 +40,17 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ba
 	if err != nil {
 		return nil, err
 	}
+	eventBus, err := eventbus.Open(ctx, config, logger, eventStore.Outbox)
+	if err != nil {
+		return nil, err
+	}
 	bankAPI := &BankAPI{
 		logger:     logger,
 		config:     config,
 		database:   database,
 		eventStore: eventStore,
 		projection: projection,
+		eventBus:   eventBus,
 	}
 	return bankAPI, nil
 }
@@ -75,6 +82,10 @@ func (api BankAPI) Stop() error {
 		return err
 	}
 	err = api.projection.Close()
+	if err != nil {
+		return err
+	}
+	err = api.eventBus.Close()
 	if err != nil {
 		return err
 	}

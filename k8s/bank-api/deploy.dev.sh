@@ -26,4 +26,5 @@ kubectl apply \
   -f api.yaml \
   -f database.yaml \
   -f eventstore.yaml \
-  -f storeprojection.yaml
+  -f storeprojection.yaml \
+  -f eventbus.yaml

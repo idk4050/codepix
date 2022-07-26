@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eventbus
+  namespace: codepix-bank-api
+spec:
+  ports:
+    - port: 4004
+      targetPort: 6379
+  selector:
+    name: eventbus
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: eventbus-data
+  namespace: codepix-bank-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eventbus
+  namespace: codepix-bank-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: eventbus
+  template:
+    metadata:
+      labels:
+        name: eventbus
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: eventbus-data
+      containers:
+        - name: eventbus
+          image: docker.io/redis:7.0.4
+          ports:
+            - containerPort: 6379
+          resources: {}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          args: ["--requirepass", "$(EB_PASSWORD)"]
+          envFrom:
+            - configMapRef:
+                name: eventbus
+          env:
+            - name: EB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eventbus
+                  key: EB_PASSWORD

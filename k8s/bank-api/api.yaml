@@ -48,3 +48,7 @@ spec:
                 name: storeprojection
             - secretRef:
                 name: storeprojection
+            - configMapRef:
+                name: eventbus
+            - secretRef:
+                name: eventbus

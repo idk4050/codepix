@@ -16,6 +16,7 @@ type Config struct {
 	Database        database
 	EventStore      eventStore
 	StoreProjection storeProjection
+	EventBus        eventBus
 }
 
 func New() (*Config, error) {
@@ -23,6 +24,7 @@ func New() (*Config, error) {
 		Database:        database{},
 		EventStore:      eventStore{},
 		StoreProjection: storeProjection{},
+		EventBus:        eventBus{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -39,6 +41,10 @@ func New() (*Config, error) {
 	env.Parse(&c.StoreProjection)
 	if reflect.DeepEqual(c.StoreProjection, storeProjection{}) {
 		return nil, errors.New("failed to load store projection config")
+	}
+	env.Parse(&c.EventBus)
+	if c.EventBus == (eventBus{}) {
+		return nil, errors.New("failed to load event bus config")
 	}
 	return c, nil
 }
@@ -84,4 +90,13 @@ type storeProjection struct {
 	Name           string   `env:"SP_NAME"`
 	User           string   `env:"SP_USER"`
 	Password       string   `env:"SP_PASSWORD"`
+}
+
+type eventBus struct {
+	InMemory bool   `env:"EB_IN_MEMORY"`
+	Host     string `env:"EB_HOST"`
+	Port     string `env:"EB_PORT"`
+	Name     string `env:"EB_NAME"`
+	User     string `env:"EB_USER"`
+	Password string `env:"EB_PASSWORD"`
 }
