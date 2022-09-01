@@ -6,6 +6,13 @@ import (
 	"codepix/customer-api/adapters/outbox"
 	"codepix/customer-api/adapters/validator"
 	"codepix/customer-api/config"
+	apikeyusecase "codepix/customer-api/customer/bank/apikey/interactor/usecase"
+	apikeydatabase "codepix/customer-api/customer/bank/apikey/repository/database"
+	apikeyservice "codepix/customer-api/customer/bank/apikey/service"
+	bankauth "codepix/customer-api/customer/bank/auth"
+	bankusecase "codepix/customer-api/customer/bank/interactor/usecase"
+	bankdatabase "codepix/customer-api/customer/bank/repository/database"
+	bankservice "codepix/customer-api/customer/bank/service"
 	customerdatabase "codepix/customer-api/customer/repository/database"
 	customerservice "codepix/customer-api/customer/service"
 	signupeventhandler "codepix/customer-api/customer/signup/eventhandler"
@@ -105,6 +112,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 
 	userRepository := userdatabase.Database{Database: database}
 	customerRepository := customerdatabase.Database{Database: database}
+	bankRepository := bankdatabase.Database{Database: database}
 
 	signInRepository := signindatabase.Database{Database: database, Outbox: outbox}
 	signInInteractor := signincommandhandler.CommandHandler{
@@ -117,13 +125,36 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 		return nil, err
 	}
 
-	err = customerservice.Register(config, chain, handle, validator, customerRepository)
+	err = customerservice.Register(config, chain, handle, validator, customerRepository, bankRepository)
 	if err != nil {
 		return nil, err
 	}
 	signUpRepository := signupdatabase.Database{Database: database, Outbox: outbox}
 	signUpInteractor := signupcommandhandler.CommandHandler{Repository: signUpRepository}
 	err = signupservice.Register(signUpInteractor, chain, handle, validator)
+	if err != nil {
+		return nil, err
+	}
+
+	apiKeyRepository := apikeydatabase.Database{Database: database}
+	bankInteractor := bankusecase.Usecase{
+		Repository:         bankRepository,
+		CustomerRepository: customerRepository,
+	}
+	err = bankservice.RegisterHandler(config, chain, handle, validator,
+		bankInteractor, bankRepository, apiKeyRepository)
+	if err != nil {
+		return nil, err
+	}
+
+	apiKeyInteractor := &apikeyusecase.Usecase{Repository: apiKeyRepository}
+	err = apikeyservice.Register(config, chain, handle, validator,
+		apiKeyInteractor, apiKeyRepository, bankRepository)
+	if err != nil {
+		return nil, err
+	}
+
+	err = bankauth.New(config, chain, handle, apiKeyRepository)
 	if err != nil {
 		return nil, err
 	}
@@ -158,6 +189,8 @@ func (api CustomerAPI) Start(ctx context.Context) error {
 		&signindatabase.SignIn{},
 		&customerdatabase.Customer{},
 		&signupdatabase.SignUp{},
+		&bankdatabase.Bank{},
+		&apikeydatabase.APIKey{},
 	)
 	if err != nil {
 		return err

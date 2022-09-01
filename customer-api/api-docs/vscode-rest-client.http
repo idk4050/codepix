@@ -37,3 +37,58 @@ DELETE {{api}}/signin-request/{{signin_token}}
 GET {{api}}/customer/{{customer_id}}
 Cookie: {{cookie}}
 ###
+
+# @name list_banks
+GET {{api}}/customer/{{customer_id}}/banks
+Cookie: {{cookie}}
+###
+
+# @name register_bank
+POST {{api}}/bank
+Cookie: {{cookie}}
+
+{
+  "code": 1,
+  "name": "test"
+}
+###
+
+@bank_id = {{register_bank.response.body.id}}
+
+# @name find_bank
+GET {{api}}/bank/{{bank_id}}
+Cookie: {{cookie}}
+###
+
+# @name remove_bank
+DELETE {{api}}/bank/{{bank_id}}
+Cookie: {{cookie}}
+###
+
+# @name list_apikeys
+GET {{api}}/bank/{{bank_id}}/apikeys
+Cookie: {{cookie}}
+###
+
+# @name create_apikey
+POST {{api}}/bank/{{bank_id}}/apikeys
+Cookie: {{cookie}}
+
+{
+  "name": "test"
+}
+###
+
+@apikey_id = {{create_apikey.response.body.id}}
+@apikey_secret = {{create_apikey.response.body.secret}}
+
+# @name remove_apikey
+DELETE {{api}}/bank/{{bank_id}}/apikeys/{{apikey_id}}
+Cookie: {{cookie}}
+###
+
+# @name authenticate_bank
+POST {{api}}/bank-auth
+
+{{apikey_secret}}
+###

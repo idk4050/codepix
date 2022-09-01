@@ -3,6 +3,7 @@ package service
 import (
 	"codepix/customer-api/adapters/httputils"
 	"codepix/customer-api/customer"
+	bankrepository "codepix/customer-api/customer/bank/repository"
 	"codepix/customer-api/customer/repository"
 	"net/http"
 
@@ -10,7 +11,8 @@ import (
 )
 
 type Service struct {
-	Repository repository.Repository
+	Repository     repository.Repository
+	BankRepository bankrepository.Repository
 }
 
 type Find struct {
@@ -36,4 +38,25 @@ func findResult(customer customer.Customer) FindResult {
 	return FindResult{
 		Name: customer.Name,
 	}
+}
+
+type ListBanks struct {
+	CustomerID uuid.UUID `param:"customer-id"`
+}
+type ListBanksResult struct {
+	Banks []bankrepository.BankListItem `json:"banks"`
+}
+
+func (s Service) ListBanks(w http.ResponseWriter, r *http.Request) {
+	params := httputils.Params(r, ListBanks{})
+
+	banks, err := s.BankRepository.List(params.CustomerID)
+	if err != nil {
+		httputils.Error(w, r, err)
+		return
+	}
+	result := ListBanksResult{
+		Banks: banks,
+	}
+	httputils.Json(w, result, http.StatusOK)
 }

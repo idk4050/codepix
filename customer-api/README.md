@@ -32,3 +32,11 @@ Sign-up and sign-in use single-use tokens, which are printed to the terminal rat
 ### User authentication
 
 Validation keys can be rotated through the `USER_AUTH_PREVIOUS_VALIDATION_KEY` variable. During authentication, it will be tried if the current one fails.
+
+### Bank authentication
+
+Banks can also use their API keys to request tokens for use in the Bank API.
+
+Token signing is controlled by the Customer API while token validation is done by the Bank API.
+
+See the Bank API [README](../bank-api/README.md#authentication) for more information.

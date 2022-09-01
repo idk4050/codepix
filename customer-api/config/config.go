@@ -24,6 +24,7 @@ type Config struct {
 	HTTP         http
 	InitialState initialState
 	UserAuth     userAuth
+	BankAuth     bankAuth
 }
 
 func New() (*Config, error) {
@@ -32,6 +33,7 @@ func New() (*Config, error) {
 		HTTP:         http{},
 		InitialState: initialState{},
 		UserAuth:     userAuth{},
+		BankAuth:     bankAuth{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -53,6 +55,14 @@ func New() (*Config, error) {
 	err = c.UserAuth.build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build user auth config: %w", err)
+	}
+	env.Parse(&c.BankAuth)
+	if c.BankAuth == (bankAuth{}) {
+		return nil, errors.New("failed to load bank auth config")
+	}
+	err = c.BankAuth.build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build bank auth config: %w", err)
 	}
 	return c, nil
 }
@@ -139,6 +149,35 @@ func (c *userAuth) build() error {
 		return err
 	}
 	c.PreviousValidationKey = previousValidationKey
+
+	c.TimeUntilExpiration = time.Minute * time.Duration(c.MinutesUntilExpirationInt)
+	return nil
+}
+
+type bankAuth struct {
+	SigningMethod             jwt.SigningMethod
+	SigningKey                any
+	SigningKeyString          string `env:"BANK_AUTH_SIGNING_KEY"`
+	TimeUntilExpiration       time.Duration
+	MinutesUntilExpirationInt uint `env:"BANK_AUTH_MINUTES_UNTIL_EXPIRATION"`
+}
+
+func (c *bankAuth) build() error {
+	signingKeyPem, _ := pem.Decode([]byte(escapeNewLines(c.SigningKeyString)))
+	if signingKeyPem == nil {
+		return fmt.Errorf("failed to decode signing key")
+	}
+	signingKey, err := x509.ParsePKCS8PrivateKey(signingKeyPem.Bytes)
+	if err != nil {
+		return fmt.Errorf("invalid signing key: %w", err)
+	}
+	c.SigningKey = signingKey
+
+	signingMethod := getSigningMethod(signingKey)
+	if signingMethod == nil {
+		return errors.New("no signing method found for key")
+	}
+	c.SigningMethod = signingMethod
 
 	c.TimeUntilExpiration = time.Minute * time.Duration(c.MinutesUntilExpirationInt)
 	return nil
