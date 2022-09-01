@@ -4,14 +4,26 @@ import (
 	"codepix/customer-api/adapters/databaseclient"
 	"codepix/customer-api/adapters/httputils"
 	"codepix/customer-api/adapters/outbox"
+	"codepix/customer-api/adapters/validator"
 	"codepix/customer-api/config"
 	"codepix/customer-api/lib/outboxes"
 	"codepix/customer-api/lib/publishers"
+	"codepix/customer-api/lib/repositories"
+	"codepix/customer-api/user"
+	userrepository "codepix/customer-api/user/repository"
+	userdatabase "codepix/customer-api/user/repository/database"
+	signineventhandler "codepix/customer-api/user/signin/eventhandler"
+	signinemailsender "codepix/customer-api/user/signin/eventhandler/emailsender"
+	signincommandhandler "codepix/customer-api/user/signin/interactor/commandhandler"
+	signinpublisher "codepix/customer-api/user/signin/publisher"
+	signindatabase "codepix/customer-api/user/signin/repository/database"
+	signinservice "codepix/customer-api/user/signin/service"
 	"context"
 	"embed"
 	"errors"
 	"io/fs"
 	"net/http"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -25,11 +37,12 @@ import (
 var _apiDocsFS embed.FS
 
 type CustomerAPI struct {
-	logger   logr.Logger
-	config   config.Config
-	database *databaseclient.Database
-	outbox   outboxes.Outbox
-	server   *http.Server
+	logger         logr.Logger
+	config         config.Config
+	database       *databaseclient.Database
+	outbox         outboxes.Outbox
+	server         *http.Server
+	userRepository userrepository.Repository
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*CustomerAPI, error) {
@@ -48,8 +61,16 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 	if err != nil {
 		return nil, err
 	}
-	publishers := map[outboxes.Namespace]publishers.Publisher{}
+	publishers := map[outboxes.Namespace]publishers.Publisher{
+		signineventhandler.Namespace: signinpublisher.Publisher{
+			EventHandler: signinemailsender.EmailSender{},
+		},
+	}
 	outbox, err := outbox.Open(config, logger, publishers)
+	if err != nil {
+		return nil, err
+	}
+	validator, err := validator.New()
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +80,10 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 	router.RedirectFixedPath = true
 	router.HandleMethodNotAllowed = true
 
+	handle := httputils.RouterHandler(func(method string, path string, handler http.Handler) {
+		router.Handler(method, filepath.Join("/api", path), handler)
+	})
+
 	chain := alice.New(
 		httputils.PanicHandler(panicLogger),
 		httputils.Logger(logger),
@@ -66,6 +91,19 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 
 	router.NotFound = chain.ThenFunc(httputils.NotFound)
 	router.MethodNotAllowed = chain.ThenFunc(httputils.NotAllowed)
+
+	userRepository := userdatabase.Database{Database: database}
+
+	signInRepository := signindatabase.Database{Database: database, Outbox: outbox}
+	signInInteractor := signincommandhandler.CommandHandler{
+		Repository:     signInRepository,
+		UserRepository: userRepository,
+	}
+	err = signinservice.Register(config, chain, handle, validator,
+		signInInteractor, signInRepository, userRepository)
+	if err != nil {
+		return nil, err
+	}
 
 	apiDocsFS, err := fs.Sub(_apiDocsFS, "api-docs")
 	if err != nil {
@@ -79,11 +117,12 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 	server := &http.Server{Addr: ":" + config.HTTP.Port, Handler: router}
 
 	customerAPI := &CustomerAPI{
-		config:   config,
-		logger:   logger,
-		database: database,
-		outbox:   outbox,
-		server:   server,
+		config:         config,
+		logger:         logger,
+		database:       database,
+		outbox:         outbox,
+		server:         server,
+		userRepository: userRepository,
 	}
 	return customerAPI, nil
 }
@@ -91,7 +130,14 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 func (api CustomerAPI) Start(ctx context.Context) error {
 	api.logger.Info("starting customer API")
 
-	err := api.database.AutoMigrate()
+	err := api.database.AutoMigrate(
+		&userdatabase.User{},
+		&signindatabase.SignIn{},
+	)
+	if err != nil {
+		return err
+	}
+	err = createInitialUsers(api.config, api.userRepository)
 	if err != nil {
 		return err
 	}
@@ -134,5 +180,24 @@ func (api CustomerAPI) Stop() error {
 		return err
 	}
 	api.logger.Info("customer API stopped")
+	return nil
+}
+
+func createInitialUsers(config config.Config, repository userrepository.Repository) error {
+	emails := config.InitialState.UserEmails
+
+	for _, email := range emails {
+		err := repository.Exists(email)
+
+		var notFound *repositories.NotFoundError
+		if errors.As(err, &notFound) {
+			_, err := repository.Add(user.User{
+				Email: email,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
