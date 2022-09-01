@@ -6,6 +6,14 @@ import (
 	"codepix/customer-api/adapters/outbox"
 	"codepix/customer-api/adapters/validator"
 	"codepix/customer-api/config"
+	customerdatabase "codepix/customer-api/customer/repository/database"
+	customerservice "codepix/customer-api/customer/service"
+	signupeventhandler "codepix/customer-api/customer/signup/eventhandler"
+	signupemailsender "codepix/customer-api/customer/signup/eventhandler/emailsender"
+	signupcommandhandler "codepix/customer-api/customer/signup/interactor/commandhandler"
+	signuppublisher "codepix/customer-api/customer/signup/publisher"
+	signupdatabase "codepix/customer-api/customer/signup/repository/database"
+	signupservice "codepix/customer-api/customer/signup/service"
 	"codepix/customer-api/lib/outboxes"
 	"codepix/customer-api/lib/publishers"
 	"codepix/customer-api/lib/repositories"
@@ -62,6 +70,9 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 		return nil, err
 	}
 	publishers := map[outboxes.Namespace]publishers.Publisher{
+		signupeventhandler.Namespace: signuppublisher.Publisher{
+			EventHandler: signupemailsender.EmailSender{},
+		},
 		signineventhandler.Namespace: signinpublisher.Publisher{
 			EventHandler: signinemailsender.EmailSender{},
 		},
@@ -93,6 +104,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 	router.MethodNotAllowed = chain.ThenFunc(httputils.NotAllowed)
 
 	userRepository := userdatabase.Database{Database: database}
+	customerRepository := customerdatabase.Database{Database: database}
 
 	signInRepository := signindatabase.Database{Database: database, Outbox: outbox}
 	signInInteractor := signincommandhandler.CommandHandler{
@@ -100,7 +112,18 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 		UserRepository: userRepository,
 	}
 	err = signinservice.Register(config, chain, handle, validator,
-		signInInteractor, signInRepository, userRepository)
+		signInInteractor, signInRepository, userRepository, customerRepository)
+	if err != nil {
+		return nil, err
+	}
+
+	err = customerservice.Register(config, chain, handle, validator, customerRepository)
+	if err != nil {
+		return nil, err
+	}
+	signUpRepository := signupdatabase.Database{Database: database, Outbox: outbox}
+	signUpInteractor := signupcommandhandler.CommandHandler{Repository: signUpRepository}
+	err = signupservice.Register(signUpInteractor, chain, handle, validator)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +156,8 @@ func (api CustomerAPI) Start(ctx context.Context) error {
 	err := api.database.AutoMigrate(
 		&userdatabase.User{},
 		&signindatabase.SignIn{},
+		&customerdatabase.Customer{},
+		&signupdatabase.SignUp{},
 	)
 	if err != nil {
 		return err

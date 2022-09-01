@@ -3,6 +3,8 @@ package service
 import (
 	"codepix/customer-api/adapters/httputils"
 	"codepix/customer-api/config"
+	customerauth "codepix/customer-api/customer/auth"
+	customerrepository "codepix/customer-api/customer/repository"
 	"codepix/customer-api/lib/validation"
 	userauth "codepix/customer-api/user/auth"
 	userrepository "codepix/customer-api/user/repository"
@@ -20,6 +22,7 @@ func Register(
 	interactor interactor.Interactor,
 	repository repository.Repository,
 	userRepository userrepository.Repository,
+	customerRepository customerrepository.Repository,
 ) error {
 	service := &Service{
 		Interactor: interactor,
@@ -32,6 +35,7 @@ func Register(
 	handle("DELETE", "/signin-request/:token", chain.Append(
 		httputils.WithParams(validator, Finish{}),
 		userauth.AddClaims(userRepository, repository),
+		customerauth.AddClaims(customerRepository),
 		service.Finish,
 	).ThenFunc(userauth.CreateToken(config)))
 

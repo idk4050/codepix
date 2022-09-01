@@ -1,2 +1,39 @@
 @host = http://localhost:3000
 @api = {{host}}/api
+
+@email = customer@example.com
+
+# @name start_signup
+POST {{api}}/signup-request
+
+{
+  "name": "test",
+  "email": "{{email}}"
+}
+###
+
+# @name finish_signup
+# @prompt signup_token the token sent via email
+DELETE {{api}}/signup-request/{{signup_token}}
+###
+
+# @name start_signin
+POST {{api}}/signin-request
+
+{
+  "email": "{{email}}"
+}
+###
+
+# @name finish_signin
+# @prompt signin_token the token sent via email
+DELETE {{api}}/signin-request/{{signin_token}}
+###
+
+@cookie = {{finish_signin.response.headers.Set-Cookie}}
+@customer_id = {{finish_signin.response.body.customer_id}}
+
+# @name find_customer
+GET {{api}}/customer/{{customer_id}}
+Cookie: {{cookie}}
+###
