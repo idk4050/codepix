@@ -13,11 +13,13 @@ import (
 
 type Config struct {
 	Database database
+	HTTP     http
 }
 
 func New() (*Config, error) {
 	c := &Config{
 		Database: database{},
+		HTTP:     http{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -26,6 +28,10 @@ func New() (*Config, error) {
 	env.Parse(&c.Database)
 	if c.Database == (database{}) {
 		return nil, errors.New("failed to load database config")
+	}
+	env.Parse(&c.HTTP)
+	if c.HTTP == (http{}) {
+		return nil, errors.New("failed to load HTTP config")
 	}
 	return c, nil
 }
@@ -53,4 +59,8 @@ type database struct {
 	Password         string `env:"DB_PASSWORD"`
 	SSLMode          string `env:"DB_SSLMODE"`
 	AutoMigrate      bool   `env:"DB_AUTO_MIGRATE"`
+}
+
+type http struct {
+	Port string `env:"HTTP_PORT"`
 }

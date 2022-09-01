@@ -14,3 +14,9 @@ Example command:
 ```
 ./config/create-env-file.sh test
 ```
+
+<br>
+
+## Browsing the API
+
+To browse the API, use [vscode-restclient](https://github.com/Huachao/vscode-restclient). The http sheet is inside the [api-docs/](api-docs/vscode-rest-client.http) directory, which is also statically served on the public endpoint `/api-docs/`
