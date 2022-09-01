@@ -1,0 +1,9 @@
+{
+  "TestStruct": {
+    "123": {
+      "error_messages": {
+        "test_tag": "test"
+      }
+    }
+  }
+}

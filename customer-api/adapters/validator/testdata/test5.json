@@ -1,0 +1,9 @@
+{
+  "TestStruct": {
+    "en_US": {
+      "error_messages": {
+        "test_tag1": "broken field name template {0"
+      }
+    }
+  }
+}
