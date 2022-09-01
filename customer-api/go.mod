@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/caarlos0/env v3.5.0+incompatible
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/go-logr/logr v0.4.0
 	github.com/go-logr/zapr v0.4.0
 	github.com/go-playground/locales v0.14.0
@@ -14,8 +15,11 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
+	github.com/jonboulle/clockwork v0.3.0
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/mcuadros/go-lookup v0.0.0-20200831155250-80f87a4fa5ee
+	github.com/omaskery/outboxen v0.4.0
+	github.com/omaskery/outboxen-gorm v0.4.0
 	github.com/stretchr/testify v1.8.0
 	github.com/subosito/gotenv v1.4.1
 	go.uber.org/zap v1.23.0
@@ -23,6 +27,8 @@ require (
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.8
 )
+
+replace github.com/omaskery/outboxen-gorm => github.com/idk4050/outboxen-gorm v0.4.1
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

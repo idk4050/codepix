@@ -2,7 +2,10 @@ package customerapi
 
 import (
 	"codepix/customer-api/adapters/databaseclient"
+	"codepix/customer-api/adapters/outbox"
 	"codepix/customer-api/config"
+	"codepix/customer-api/lib/outboxes"
+	"codepix/customer-api/lib/publishers"
 	"context"
 
 	"github.com/go-logr/logr"
@@ -15,6 +18,7 @@ type CustomerAPI struct {
 	logger   logr.Logger
 	config   config.Config
 	database *databaseclient.Database
+	outbox   outboxes.Outbox
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*CustomerAPI, error) {
@@ -26,11 +30,17 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Cu
 	if err != nil {
 		return nil, err
 	}
+	publishers := map[outboxes.Namespace]publishers.Publisher{}
+	outbox, err := outbox.Open(config, logger, publishers)
+	if err != nil {
+		return nil, err
+	}
 
 	customerAPI := &CustomerAPI{
 		config:   config,
 		logger:   logger,
 		database: database,
+		outbox:   outbox,
 	}
 	return customerAPI, nil
 }
@@ -42,6 +52,11 @@ func (api CustomerAPI) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = api.outbox.AutoMigrate()
+	if err != nil {
+		return err
+	}
+	go api.outbox.Start(ctx)
 
 	api.logger.Info("customer API started")
 	return nil
