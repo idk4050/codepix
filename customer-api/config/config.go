@@ -1,22 +1,31 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 
+	"github.com/caarlos0/env"
 	"github.com/subosito/gotenv"
 )
 
 type Config struct {
+	Database database
 }
 
 func New() (*Config, error) {
-	c := &Config{}
+	c := &Config{
+		Database: database{},
+	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
 		return nil, err
+	}
+	env.Parse(&c.Database)
+	if c.Database == (database{}) {
+		return nil, errors.New("failed to load database config")
 	}
 	return c, nil
 }
@@ -32,4 +41,16 @@ func loadEnvFileIfAvailable() error {
 		}
 	}
 	return nil
+}
+
+type database struct {
+	Dialect          string `env:"DB_DIALECT"`
+	ConnectionString string `env:"DB_CONNECTION_STRING"`
+	Host             string `env:"DB_HOST"`
+	Port             string `env:"DB_PORT"`
+	Name             string `env:"DB_NAME"`
+	User             string `env:"DB_USER"`
+	Password         string `env:"DB_PASSWORD"`
+	SSLMode          string `env:"DB_SSLMODE"`
+	AutoMigrate      bool   `env:"DB_AUTO_MIGRATE"`
 }
