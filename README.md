@@ -5,6 +5,8 @@ This is a learning project of a Pix-like transaction system between banks. The B
 Transactions are started by one bank and processed asynchronously in a 3-way handshake with the receiving bank (started, confirmed/failed, completed/failed), by the use of a persistent event bus (redis streams). Banks listen to this handshake through gRPC streaming endpoints.
 Transaction update events are also stored in an event sourced store and published (atomically/outboxed) to other listeners such as the read-only projection, where they can be read and listed by the sender and the receiver.
 
+[Customer API README](customer-api/README.md)
+
 ## Development
 
 Create a local registry using [/k8s/create-registry.dev.sh](../k8s/create-registry.dev.sh)
