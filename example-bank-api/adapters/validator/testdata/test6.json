@@ -1,0 +1,9 @@
+{
+  "TestStruct": {
+    "en_US": {
+      "field_names": {
+        "NonExistingField": "test"
+      }
+    }
+  }
+}
