@@ -23,4 +23,5 @@ for secrets_env_file in $env_dir/*.secrets.production.env.example; do
 done
 
 kubectl apply \
-  -f api.yaml
+  -f api.yaml \
+  -f database.yaml

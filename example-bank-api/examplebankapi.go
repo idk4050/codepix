@@ -1,6 +1,7 @@
 package examplebankapi
 
 import (
+	"codepix/example-bank-api/adapters/databaseclient"
 	"codepix/example-bank-api/config"
 	"context"
 
@@ -11,8 +12,9 @@ import (
 )
 
 type ExampleBankAPI struct {
-	logger logr.Logger
-	config config.Config
+	logger   logr.Logger
+	config   config.Config
+	database *databaseclient.Database
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*ExampleBankAPI, error) {
@@ -21,9 +23,14 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		zap.WithCaller(false),
 	))
 
+	database, err := databaseclient.Open(config, logger)
+	if err != nil {
+		return nil, err
+	}
 	api := &ExampleBankAPI{
-		logger: logger,
-		config: config,
+		logger:   logger,
+		config:   config,
+		database: database,
 	}
 	return api, nil
 }
@@ -31,6 +38,10 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 func (api ExampleBankAPI) Start(ctx context.Context) error {
 	api.logger.Info("starting Example Bank API")
 
+	err := api.database.AutoMigrate()
+	if err != nil {
+		return err
+	}
 	api.logger.Info("Example Bank API started")
 	return nil
 }
@@ -38,6 +49,10 @@ func (api ExampleBankAPI) Start(ctx context.Context) error {
 func (api ExampleBankAPI) Stop() error {
 	api.logger.Info("stopping Example Bank API")
 
+	err := api.database.Close()
+	if err != nil {
+		return err
+	}
 	api.logger.Info("Example Bank API stopped")
 	return nil
 }

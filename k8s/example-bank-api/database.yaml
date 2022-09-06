@@ -1,0 +1,73 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: database
+  namespace: codepix-example-bank-api
+spec:
+  ports:
+    - port: 5001
+      targetPort: 5432
+  selector:
+    name: database
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: database-data
+  namespace: codepix-example-bank-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database
+  namespace: codepix-example-bank-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: database
+  template:
+    metadata:
+      labels:
+        name: database
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: database-data
+      containers:
+        - name: database
+          image: docker.io/postgres:14.2
+          ports:
+            - containerPort: 5432
+          resources: {}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: database
+                  key: DB_NAME
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: database
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database
+                  key: DB_PASSWORD
+            - name: PGSSLMODE
+              valueFrom:
+                configMapKeyRef:
+                  name: database
+                  key: DB_SSLMODE
