@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: messagequeue
+  namespace: codepix-example-bank-api
+spec:
+  ports:
+    - port: 5002
+      targetPort: 6379
+  selector:
+    name: messagequeue
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: messagequeue-data
+  namespace: codepix-example-bank-api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: messagequeue
+  namespace: codepix-example-bank-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: messagequeue
+  template:
+    metadata:
+      labels:
+        name: messagequeue
+    spec:
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: messagequeue-data
+      containers:
+        - name: messagequeue
+          image: docker.io/redis:7.0.4
+          ports:
+            - containerPort: 6379
+          resources: {}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          args: ["--requirepass", "$(MQ_PASSWORD)"]
+          env:
+            - name: MQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: messagequeue
+                  key: MQ_PASSWORD

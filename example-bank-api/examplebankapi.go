@@ -2,6 +2,7 @@ package examplebankapi
 
 import (
 	"codepix/example-bank-api/adapters/databaseclient"
+	"codepix/example-bank-api/adapters/messagequeue"
 	"codepix/example-bank-api/config"
 	"context"
 
@@ -12,9 +13,10 @@ import (
 )
 
 type ExampleBankAPI struct {
-	logger   logr.Logger
-	config   config.Config
-	database *databaseclient.Database
+	logger       logr.Logger
+	config       config.Config
+	database     *databaseclient.Database
+	messageQueue *messagequeue.MessageQueue
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*ExampleBankAPI, error) {
@@ -27,10 +29,15 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 	if err != nil {
 		return nil, err
 	}
+	messageQueue, err := messagequeue.Open(config, logger)
+	if err != nil {
+		return nil, err
+	}
 	api := &ExampleBankAPI{
-		logger:   logger,
-		config:   config,
-		database: database,
+		logger:       logger,
+		config:       config,
+		database:     database,
+		messageQueue: messageQueue,
 	}
 	return api, nil
 }
@@ -50,6 +57,10 @@ func (api ExampleBankAPI) Stop() error {
 	api.logger.Info("stopping Example Bank API")
 
 	err := api.database.Close()
+	if err != nil {
+		return err
+	}
+	err = api.messageQueue.Close()
 	if err != nil {
 		return err
 	}

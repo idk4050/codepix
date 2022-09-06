@@ -12,12 +12,14 @@ import (
 )
 
 type Config struct {
-	Database database
+	Database     database
+	MessageQueue messageQueue
 }
 
 func New() (*Config, error) {
 	c := &Config{
-		Database: database{},
+		Database:     database{},
+		MessageQueue: messageQueue{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -26,6 +28,10 @@ func New() (*Config, error) {
 	env.Parse(&c.Database)
 	if c.Database == (database{}) {
 		return nil, errors.New("failed to load database config")
+	}
+	env.Parse(&c.MessageQueue)
+	if c.MessageQueue == (messageQueue{}) {
+		return nil, errors.New("failed to load message queue config")
 	}
 	return c, nil
 }
@@ -53,4 +59,13 @@ type database struct {
 	Password         string `env:"DB_PASSWORD"`
 	SSLMode          string `env:"DB_SSLMODE"`
 	AutoMigrate      bool   `env:"DB_AUTO_MIGRATE"`
+}
+
+type messageQueue struct {
+	InMemory bool   `env:"MQ_IN_MEMORY"`
+	Host     string `env:"MQ_HOST"`
+	Port     string `env:"MQ_PORT"`
+	Name     string `env:"MQ_NAME"`
+	User     string `env:"MQ_USER"`
+	Password string `env:"MQ_PASSWORD"`
 }
