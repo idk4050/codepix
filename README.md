@@ -9,6 +9,8 @@ Transaction update events are also stored in an event sourced store and publishe
 
 [Bank API README](bank-api/README.md)
 
+[Example Bank API README](example-bank-api/README.md)
+
 ## Development
 
 Create a local registry using [/k8s/create-registry.dev.sh](../k8s/create-registry.dev.sh)
