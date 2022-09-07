@@ -4,12 +4,19 @@ import (
 	"codepix/example-bank-api/adapters/databaseclient"
 	"codepix/example-bank-api/adapters/httputils"
 	"codepix/example-bank-api/adapters/messagequeue"
+	"codepix/example-bank-api/adapters/validator"
 	"codepix/example-bank-api/config"
+	userdatabase "codepix/example-bank-api/user/repository/database"
+	signinqueue "codepix/example-bank-api/user/signin/queue"
+	signinrepository "codepix/example-bank-api/user/signin/repository"
+	signindatabase "codepix/example-bank-api/user/signin/repository/database"
+	signinservice "codepix/example-bank-api/user/signin/service"
 	"context"
 	"embed"
 	"errors"
 	"io/fs"
 	"net/http"
+	"path/filepath"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -23,11 +30,12 @@ import (
 var _apiDocsFS embed.FS
 
 type ExampleBankAPI struct {
-	logger       logr.Logger
-	config       config.Config
-	database     *databaseclient.Database
-	messageQueue *messagequeue.MessageQueue
-	server       *http.Server
+	logger           logr.Logger
+	config           config.Config
+	database         *databaseclient.Database
+	messageQueue     *messagequeue.MessageQueue
+	server           *http.Server
+	signInRepository signinrepository.Repository
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*ExampleBankAPI, error) {
@@ -50,19 +58,26 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 	if err != nil {
 		return nil, err
 	}
+	validator, err := validator.New()
+	if err != nil {
+		return nil, err
+	}
 
 	router := httprouter.New()
 	router.RedirectTrailingSlash = true
 	router.RedirectFixedPath = true
 	router.HandleMethodNotAllowed = true
-
 	chain := alice.New(
 		httputils.PanicHandler(panicLogger),
 		httputils.Logger(logger),
 	)
 	router.NotFound = chain.ThenFunc(httputils.NotFound)
 	router.MethodNotAllowed = chain.ThenFunc(httputils.NotAllowed)
+	server := &http.Server{Addr: ":" + config.HTTP.Port, Handler: router}
 
+	handle := httputils.RouterHandler(func(method string, path string, handler http.Handler) {
+		router.Handler(method, filepath.Join("/api", path), handler)
+	})
 	apiDocsFS, err := fs.Sub(_apiDocsFS, "api-docs")
 	if err != nil {
 		return nil, err
@@ -72,14 +87,22 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		http.StripPrefix("/api-docs", apiDocsHandler),
 	))
 
-	server := &http.Server{Addr: ":" + config.HTTP.Port, Handler: router}
+	userRepository := userdatabase.Database{Database: database}
+	signInRepository := signindatabase.Database{Database: database}
+
+	err = signinservice.Register(config, chain, handle, validator,
+		messageQueue, signInRepository, userRepository)
+	if err != nil {
+		return nil, err
+	}
 
 	api := &ExampleBankAPI{
-		logger:       logger,
-		config:       config,
-		database:     database,
-		messageQueue: messageQueue,
-		server:       server,
+		logger:           logger,
+		config:           config,
+		database:         database,
+		messageQueue:     messageQueue,
+		server:           server,
+		signInRepository: signInRepository,
 	}
 	return api, nil
 }
@@ -87,7 +110,14 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 func (api ExampleBankAPI) Start(ctx context.Context) error {
 	api.logger.Info("starting Example Bank API")
 
-	err := api.database.AutoMigrate()
+	err := api.database.AutoMigrate(
+		&userdatabase.User{},
+		&signindatabase.SignIn{},
+	)
+	if err != nil {
+		return err
+	}
+	err = signinqueue.SetupReaders(ctx, api.messageQueue, api.signInRepository)
 	if err != nil {
 		return err
 	}

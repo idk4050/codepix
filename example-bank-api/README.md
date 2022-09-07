@@ -29,3 +29,7 @@ To browse the API, use [vscode-restclient](https://github.com/Huachao/vscode-res
 Authentication is done via JWT.
 
 Sign-up and sign-in use single-use tokens, which are printed to the terminal rather than being sent via email for the time being.
+
+### User authentication
+
+Validation keys can be rotated through the `USER_AUTH_PREVIOUS_VALIDATION_KEY` variable. During authentication, it will be tried if the current one fails.
