@@ -6,6 +6,12 @@ import (
 	"codepix/example-bank-api/adapters/messagequeue"
 	"codepix/example-bank-api/adapters/validator"
 	"codepix/example-bank-api/config"
+	customerdatabase "codepix/example-bank-api/customer/repository/database"
+	customerservice "codepix/example-bank-api/customer/service"
+	signupqueue "codepix/example-bank-api/customer/signup/queue"
+	signuprepository "codepix/example-bank-api/customer/signup/repository"
+	signupdatabase "codepix/example-bank-api/customer/signup/repository/database"
+	signupservice "codepix/example-bank-api/customer/signup/service"
 	userdatabase "codepix/example-bank-api/user/repository/database"
 	signinqueue "codepix/example-bank-api/user/signin/queue"
 	signinrepository "codepix/example-bank-api/user/signin/repository"
@@ -36,6 +42,7 @@ type ExampleBankAPI struct {
 	messageQueue     *messagequeue.MessageQueue
 	server           *http.Server
 	signInRepository signinrepository.Repository
+	signUpRepository signuprepository.Repository
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*ExampleBankAPI, error) {
@@ -89,9 +96,19 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 
 	userRepository := userdatabase.Database{Database: database}
 	signInRepository := signindatabase.Database{Database: database}
+	customerRepository := customerdatabase.Database{Database: database}
+	signUpRepository := signupdatabase.Database{Database: database}
 
 	err = signinservice.Register(config, chain, handle, validator,
-		messageQueue, signInRepository, userRepository)
+		messageQueue, signInRepository, userRepository, customerRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = signupservice.Register(chain, handle, validator, messageQueue, signUpRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = customerservice.Register(config, chain, handle, validator, customerRepository)
 	if err != nil {
 		return nil, err
 	}
@@ -103,6 +120,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		messageQueue:     messageQueue,
 		server:           server,
 		signInRepository: signInRepository,
+		signUpRepository: signUpRepository,
 	}
 	return api, nil
 }
@@ -113,11 +131,17 @@ func (api ExampleBankAPI) Start(ctx context.Context) error {
 	err := api.database.AutoMigrate(
 		&userdatabase.User{},
 		&signindatabase.SignIn{},
+		&customerdatabase.Customer{},
+		&signupdatabase.SignUp{},
 	)
 	if err != nil {
 		return err
 	}
 	err = signinqueue.SetupReaders(ctx, api.messageQueue, api.signInRepository)
+	if err != nil {
+		return err
+	}
+	err = signupqueue.SetupReaders(ctx, api.messageQueue, api.signUpRepository)
 	if err != nil {
 		return err
 	}

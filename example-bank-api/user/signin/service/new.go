@@ -4,6 +4,8 @@ import (
 	"codepix/example-bank-api/adapters/httputils"
 	"codepix/example-bank-api/adapters/messagequeue"
 	"codepix/example-bank-api/config"
+	customerauth "codepix/example-bank-api/customer/auth"
+	customerrepository "codepix/example-bank-api/customer/repository"
 	"codepix/example-bank-api/lib/validation"
 	userauth "codepix/example-bank-api/user/auth"
 	userrepository "codepix/example-bank-api/user/repository"
@@ -20,6 +22,7 @@ func Register(
 	messageQueue *messagequeue.MessageQueue,
 	repository repository.Repository,
 	userRepository userrepository.Repository,
+	customerRepository customerrepository.Repository,
 ) error {
 	service := &Service{
 		MessageQueue:   messageQueue,
@@ -33,6 +36,7 @@ func Register(
 	handle("POST", "/signin-request/:token", chain.Append(
 		httputils.WithParams(validator, Finish{}),
 		userauth.AddClaims(userRepository, repository, "token"),
+		customerauth.AddClaims(customerRepository),
 		service.Finish,
 	).ThenFunc(userauth.CreateToken(config)))
 	return nil
