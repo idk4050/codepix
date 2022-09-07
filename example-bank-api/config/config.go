@@ -14,12 +14,14 @@ import (
 type Config struct {
 	Database     database
 	MessageQueue messageQueue
+	HTTP         http
 }
 
 func New() (*Config, error) {
 	c := &Config{
 		Database:     database{},
 		MessageQueue: messageQueue{},
+		HTTP:         http{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -32,6 +34,10 @@ func New() (*Config, error) {
 	env.Parse(&c.MessageQueue)
 	if c.MessageQueue == (messageQueue{}) {
 		return nil, errors.New("failed to load message queue config")
+	}
+	env.Parse(&c.HTTP)
+	if c.HTTP == (http{}) {
+		return nil, errors.New("failed to load HTTP config")
 	}
 	return c, nil
 }
@@ -68,4 +74,8 @@ type messageQueue struct {
 	Name     string `env:"MQ_NAME"`
 	User     string `env:"MQ_USER"`
 	Password string `env:"MQ_PASSWORD"`
+}
+
+type http struct {
+	Port string `env:"HTTP_PORT"`
 }

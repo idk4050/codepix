@@ -15,12 +15,16 @@ require (
 	github.com/iancoleman/strcase v0.2.0
 	github.com/jackc/pgconn v1.13.0
 	github.com/jackc/pgerrcode v0.0.0-20220416144525-469b46aa5efa
+	github.com/julienschmidt/httprouter v1.3.0
+	github.com/justinas/alice v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.15
 	github.com/mcuadros/go-lookup v0.0.0-20200831155250-80f87a4fa5ee
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/stretchr/testify v1.8.0
 	github.com/subosito/gotenv v1.4.1
 	go.uber.org/zap v1.23.0
+	golang.org/x/text v0.3.7
 	gorm.io/driver/postgres v1.3.9
 	gorm.io/driver/sqlite v1.3.6
 	gorm.io/gorm v1.23.8
@@ -47,6 +51,5 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
-	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
