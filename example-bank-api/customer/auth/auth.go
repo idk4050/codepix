@@ -3,6 +3,7 @@ package auth
 import (
 	"codepix/example-bank-api/adapters/httputils"
 	"codepix/example-bank-api/adapters/jwtclaims"
+	accountrepository "codepix/example-bank-api/customer/account/repository"
 	"codepix/example-bank-api/customer/repository"
 	"codepix/example-bank-api/lib/repositories"
 	userauth "codepix/example-bank-api/user/auth"
@@ -70,6 +71,26 @@ func ClaimedAndParamIDsMatch(param string) func(next http.Handler) http.Handler 
 			claimedID := GetCustomerID(r.Context())
 			if requestedID != claimedID.String() {
 				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func CustomerOwnsParamAccountID(accountRepository accountrepository.Repository, param string,
+) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			params := httprouter.ParamsFromContext(r.Context())
+			accountID, _ := uuid.Parse(params.ByName(param))
+			customerID := GetCustomerID(r.Context())
+
+			err := accountRepository.ExistsWithCustomerID(accountID, customerID)
+			if err != nil {
+				httputils.Error(w, r, err, httputils.Mapping{
+					&repositories.NotFoundError{}: http.StatusForbidden,
+				})
 				return
 			}
 			next.ServeHTTP(w, r)

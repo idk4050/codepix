@@ -37,3 +37,25 @@ POST {{api}}/signin-request/{{signin_token}}
 GET {{api}}/customer/{{customer_id}}
 Cookie: {{cookie}}
 ###
+
+# @name register_account
+POST {{api}}/account
+Cookie: {{cookie}}
+###
+
+@account_id = {{register_account.response.body.id}}
+
+# @name find_account
+GET {{api}}/account/{{account_id}}
+Cookie: {{cookie}}
+###
+
+# @name remove_account
+DELETE {{api}}/account/{{account_id}}
+Cookie: {{cookie}}
+###
+
+# @name list_accounts
+GET {{api}}/customer/{{customer_id}}/accounts
+Cookie: {{cookie}}
+###

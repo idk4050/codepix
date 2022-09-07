@@ -6,6 +6,8 @@ import (
 	"codepix/example-bank-api/adapters/messagequeue"
 	"codepix/example-bank-api/adapters/validator"
 	"codepix/example-bank-api/config"
+	accountdatabase "codepix/example-bank-api/customer/account/repository/database"
+	accountservice "codepix/example-bank-api/customer/account/service"
 	customerdatabase "codepix/example-bank-api/customer/repository/database"
 	customerservice "codepix/example-bank-api/customer/service"
 	signupqueue "codepix/example-bank-api/customer/signup/queue"
@@ -98,6 +100,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 	signInRepository := signindatabase.Database{Database: database}
 	customerRepository := customerdatabase.Database{Database: database}
 	signUpRepository := signupdatabase.Database{Database: database}
+	accountRepository := accountdatabase.Database{Database: database}
 
 	err = signinservice.Register(config, chain, handle, validator,
 		messageQueue, signInRepository, userRepository, customerRepository)
@@ -109,6 +112,10 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		return nil, err
 	}
 	err = customerservice.Register(config, chain, handle, validator, customerRepository)
+	if err != nil {
+		return nil, err
+	}
+	err = accountservice.Register(config, chain, handle, validator, accountRepository)
 	if err != nil {
 		return nil, err
 	}
@@ -133,6 +140,7 @@ func (api ExampleBankAPI) Start(ctx context.Context) error {
 		&signindatabase.SignIn{},
 		&customerdatabase.Customer{},
 		&signupdatabase.SignUp{},
+		&accountdatabase.Account{},
 	)
 	if err != nil {
 		return err
