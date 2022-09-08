@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -24,6 +25,7 @@ type Config struct {
 	MessageQueue messageQueue
 	HTTP         http
 	UserAuth     userAuth
+	PixAPI       pixAPI
 }
 
 func New() (*Config, error) {
@@ -32,6 +34,7 @@ func New() (*Config, error) {
 		MessageQueue: messageQueue{},
 		HTTP:         http{},
 		UserAuth:     userAuth{},
+		PixAPI:       pixAPI{},
 	}
 	err := loadEnvFileIfAvailable()
 	if err != nil {
@@ -56,6 +59,14 @@ func New() (*Config, error) {
 	err = c.UserAuth.build()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build user auth config: %w", err)
+	}
+	env.Parse(&c.PixAPI)
+	if c.PixAPI == (pixAPI{}) {
+		return nil, errors.New("failed to load Pix API config")
+	}
+	err = c.PixAPI.build()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Pix API config: %w", err)
 	}
 	return c, nil
 }
@@ -167,4 +178,21 @@ func getSigningMethod(key any) jwt.SigningMethod {
 
 func escapeNewLines(str string) string {
 	return strings.ReplaceAll(str, `\n`, "\n")
+}
+
+type pixAPI struct {
+	Address       string
+	Host          string `env:"PIX_API_HOST"`
+	Port          string `env:"PIX_API_PORT"`
+	TokenEndpoint string `env:"PIX_API_TOKEN_ENDPOINT"`
+	APIKey        string `env:"PIX_API_KEY"`
+}
+
+func (c *pixAPI) build() error {
+	ip, err := net.LookupIP(c.Host)
+	if err != nil {
+		return err
+	}
+	c.Address = fmt.Sprintf("%s:%s", ip[0], c.Port)
+	return nil
 }

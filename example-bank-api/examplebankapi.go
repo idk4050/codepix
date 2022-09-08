@@ -4,8 +4,12 @@ import (
 	"codepix/example-bank-api/adapters/databaseclient"
 	"codepix/example-bank-api/adapters/httputils"
 	"codepix/example-bank-api/adapters/messagequeue"
+	"codepix/example-bank-api/adapters/pix"
 	"codepix/example-bank-api/adapters/validator"
 	"codepix/example-bank-api/config"
+	pixkeyservice "codepix/example-bank-api/customer/account/pix/keys/service"
+	pixtxservice "codepix/example-bank-api/customer/account/pix/transactions/service"
+	pixtxstream "codepix/example-bank-api/customer/account/pix/transactions/stream"
 	accountdatabase "codepix/example-bank-api/customer/account/repository/database"
 	accountservice "codepix/example-bank-api/customer/account/service"
 	customerdatabase "codepix/example-bank-api/customer/repository/database"
@@ -25,6 +29,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path/filepath"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -45,6 +50,7 @@ type ExampleBankAPI struct {
 	server           *http.Server
 	signInRepository signinrepository.Repository
 	signUpRepository signuprepository.Repository
+	pixAPIClient     *pix.Client
 }
 
 func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*ExampleBankAPI, error) {
@@ -68,6 +74,10 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		return nil, err
 	}
 	validator, err := validator.New()
+	if err != nil {
+		return nil, err
+	}
+	pixAPIClient, err := pix.Open(config, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -119,6 +129,14 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 	if err != nil {
 		return nil, err
 	}
+	err = pixkeyservice.Register(config, chain, handle, validator, accountRepository, pixAPIClient)
+	if err != nil {
+		return nil, err
+	}
+	err = pixtxservice.Register(config, chain, handle, validator, accountRepository, pixAPIClient)
+	if err != nil {
+		return nil, err
+	}
 
 	api := &ExampleBankAPI{
 		logger:           logger,
@@ -128,6 +146,7 @@ func New(ctx context.Context, loggerImpl *zap.Logger, config config.Config) (*Ex
 		server:           server,
 		signInRepository: signInRepository,
 		signUpRepository: signUpRepository,
+		pixAPIClient:     pixAPIClient,
 	}
 	return api, nil
 }
@@ -153,6 +172,10 @@ func (api ExampleBankAPI) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	go api.pixAPIClient.RefreshCredentials(ctx)
+	time.Sleep(time.Second)
+	pixtxstream.Run(ctx, api.logger, api.pixAPIClient)
 
 	httpLogger := api.logger.WithName("http")
 	httpLogger.Info("http server listening on port " + api.config.HTTP.Port)
@@ -187,6 +210,10 @@ func (api ExampleBankAPI) Stop() error {
 		return err
 	}
 	err = api.messageQueue.Close()
+	if err != nil {
+		return err
+	}
+	err = api.pixAPIClient.Close()
 	if err != nil {
 		return err
 	}

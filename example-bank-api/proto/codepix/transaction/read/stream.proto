@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package codepix.transaction.read;
+option go_package = "codepix/bank-api/proto/codepix/transaction/read";
+
+import "google/protobuf/timestamp.proto";
+
+message Ack { repeated bool nacks = 1; }
+
+message StartedTransaction {
+  bytes id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  bytes sender = 3;
+  bytes sender_bank = 4;
+  bytes receiver = 5;
+  bytes receiver_bank = 6;
+  uint64 amount = 7;
+  string description = 8;
+}
+message StartedTransactions { repeated StartedTransaction events = 1; }
+
+message ConfirmedTransaction {
+  bytes id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+message ConfirmedTransactions { repeated ConfirmedTransaction events = 1; }
+
+message CompletedTransaction {
+  bytes id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+}
+message CompletedTransactions { repeated CompletedTransaction events = 1; }
+
+message FailedTransaction {
+  bytes id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  string reason = 3;
+}
+message FailedTransactions { repeated FailedTransaction events = 1; }
+
+service Stream {
+  rpc Started(stream Ack) returns (stream StartedTransactions) {};
+  rpc Confirmed(stream Ack) returns (stream ConfirmedTransactions) {};
+  rpc Completed(stream Ack) returns (stream CompletedTransactions) {};
+  rpc Failed(stream Ack) returns (stream FailedTransactions) {};
+}

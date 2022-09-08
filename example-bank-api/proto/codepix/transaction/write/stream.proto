@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package codepix.transaction.write;
+option go_package = "codepix/bank-api/proto/codepix/transaction/write";
+
+import "proto/google/rpc/status.proto";
+
+message StartRequest {
+  bytes sender_id = 1;     // @gotags: validate:"required,len=16"
+  string receiver_key = 2; // @gotags: validate:"required"
+  uint64 amount = 3;       // @gotags: validate:"required"
+  string description = 4;  // @gotags: validate:"max=100" mod:"trim"
+}
+message Started { bytes id = 1; }
+message StartReply {
+  oneof message {
+    Started started = 1;
+    google.rpc.Status error = 2;
+  }
+}
+
+message ConfirmRequest {
+  bytes id = 1; // @gotags: validate:"required"
+}
+message Confirmed {}
+message ConfirmReply {
+  oneof message {
+    Confirmed confirmed = 1;
+    google.rpc.Status error = 2;
+  }
+}
+
+message CompleteRequest {
+  bytes id = 1; // @gotags: validate:"required"
+}
+message Completed {}
+message CompleteReply {
+  oneof message {
+    Completed completed = 1;
+    google.rpc.Status error = 2;
+  }
+}
+
+message FailRequest {
+  bytes id = 1;      // @gotags: validate:"required"
+  string reason = 2; // @gotags: validate:"max=100" mod:"trim"
+}
+message Failed {}
+message FailReply {
+  oneof message {
+    Failed failed = 1;
+    google.rpc.Status error = 2;
+  }
+}
+
+service Stream {
+  rpc Start(stream StartRequest) returns (stream StartReply) {};
+  rpc Confirm(stream ConfirmRequest) returns (stream ConfirmReply) {};
+  rpc Complete(stream CompleteRequest) returns (stream CompleteReply) {};
+  rpc Fail(stream FailRequest) returns (stream FailReply) {};
+}

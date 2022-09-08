@@ -59,3 +59,53 @@ Cookie: {{cookie}}
 GET {{api}}/customer/{{customer_id}}/accounts
 Cookie: {{cookie}}
 ###
+
+# @name register_pix_key
+POST {{api}}/account/{{account_id}}/pix/keys
+Cookie: {{cookie}}
+
+{
+  "type": 3,
+  "key": "customer@example.com"
+}
+###
+
+@pix_key_id = {{register_pix_key.response.body.id}}
+
+# @name find_pix_key
+GET {{api}}/account/{{account_id}}/pix/keys/{{pix_key_id}}
+Cookie: {{cookie}}
+###
+
+# @name list_pix_keys
+GET {{api}}/account/{{account_id}}/pix/keys
+Cookie: {{cookie}}
+###
+
+# @name send_pix_transaction
+POST {{api}}/account/{{account_id}}/pix/transactions
+Cookie: {{cookie}}
+
+{
+  "receiver_key": "customer@example.com",
+  "amount": 100,
+  "description": "test"
+}
+###
+
+@pix_transaction_id = {{send_pix_transaction.response.body.id}}
+
+# @name find_pix_transaction
+GET {{api}}/account/{{account_id}}/pix/transactions/{{pix_transaction_id}}
+Cookie: {{cookie}}
+###
+
+# @name list_pix_transactions
+GET {{api}}/account/{{account_id}}/pix/transactions
+?after=2000-01-01T00:00:00.000Z
+&sender={{account_id}}
+&receiver={{account_id}}
+&limit=5
+&skip=0
+Cookie: {{cookie}}
+###

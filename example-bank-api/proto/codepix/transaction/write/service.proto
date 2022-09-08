@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package codepix.transaction.write;
+option go_package = "codepix/bank-api/proto/codepix/transaction/write";
+
+import "proto/codepix/transaction/write/stream.proto";
+
+service Service {
+  rpc Start(StartRequest) returns (Started) {};
+}
